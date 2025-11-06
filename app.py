@@ -250,7 +250,10 @@ def report():
         for tipo in ['consumidor_final', 'consumidor_fiscal', 'recibos']:
             tipo_data = fc.get(tipo, {})
             if isinstance(tipo_data, dict) and tipo_data.get('monto', 0) > 0:
-                tipo_nombre = tipo.replace('_', ' ').title()
+                if tipo == 'consumidor_fiscal':
+                    tipo_nombre = 'Comprobante Fiscal'
+                else:
+                    tipo_nombre = tipo.replace('_', ' ').title()
                 cpdf.drawString(x_margin, y, f"{tipo_nombre}: Desde {tipo_data.get('desde','')} Hasta {tipo_data.get('hasta','')} Monto: {tipo_data.get('monto',0):.2f}")
                 y -= 12
     else:
@@ -405,7 +408,10 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
         for tipo in ['consumidor_final', 'consumidor_fiscal', 'recibos']:
             tipo_data = fc.get(tipo, {})
             if isinstance(tipo_data, dict) and tipo_data.get('monto', 0) > 0:
-                tipo_nombre = tipo.replace('_', ' ').title()
+                if tipo == 'consumidor_fiscal':
+                    tipo_nombre = 'Comprobante Fiscal'
+                else:
+                    tipo_nombre = tipo.replace('_', ' ').title()
                 cpdf.drawString(x_margin, y, f"{tipo_nombre}: Desde {tipo_data.get('desde','')} Hasta {tipo_data.get('hasta','')} Monto: {tipo_data.get('monto',0):.2f}")
                 y -= 12
     else:
