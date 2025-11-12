@@ -1,0 +1,42 @@
+ARQUEO DE CAJA
+--------------------------------------------------------------------
+CAJERO/A:	FECHA:		TANDA:
+--------------------------------------------------------------------
+DESGLOSE DE ARQUEO
+TOTAL FACUTADO :				FONDO:
+BALANCE GENERAL :
+	TOTAL :
+--------------------------------------------------------------------
+BALANCE GENERAL
+EFECTIVO:
+CHEQUE:
+TARJETA:
+VALE:
+DEPOSITOS:
+TOTAL:
+--------------------------------------------------------------------
+FACTURAS EN EFECTIVO AL CONTADO
+COMPROBANTE FISCAL	CONSUMIDOR FINAL	RECIBO
+DESDE:			DESDE:			DESDE:
+HASTA:			HASTA:			HASTA:
+TOTAL:			TOTAL:			TOTAL:
+--------------------------------------------------------------------
+DESGLOSE DE EFECTIVO
+CANT 	DENOMINACION  TOTAL	 -	CANT 	DENOMINACION  TOTAL
+	2000			 -		25
+	1000			 -		10
+	500			 -		5	
+	200			 -		1
+	100			 -
+	50
+	TOTAL:					TOTAL:
+--------------------------------------------------------------------
+ENTRADA NO EFECTIVO
+
+
+
+
+--------------------------------------------------------------------
+FACTURAS A CREDITO
+COMPROBANTE FISCAL		CONSUMIDOR FINAL	VIAJE
+NUMERO	MONTO			NUMERO	MONTO		NUMERO	MONTO
