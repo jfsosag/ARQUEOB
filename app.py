@@ -384,10 +384,10 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
             current_y = y
             cpdf.setFont("Helvetica", 10) # Reset font after page break
             cpdf.drawString(col1_x_cant, current_y, "CANT")
-            cpdf.drawString(col1_x_denom, current_y, "DENOMINACION")
+            cpdf.drawString(col1_x_denom, current_y, "DENOMIN.")
             cpdf.drawString(col1_x_total, current_y, "TOTAL")
             cpdf.drawString(col2_x_cant, current_y, "CANT")
-            cpdf.drawString(col2_x_denom, current_y, "DENOMINACION")
+            cpdf.drawString(col2_x_denom, current_y, "DENOMIN.")
             cpdf.drawString(col2_x_total, current_y, "TOTAL")
             current_y -= 12
 
