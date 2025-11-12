@@ -45,13 +45,17 @@ def compute_totals(data):
             pass
     # noncash
     noncash_aggregated = data.get('noncash', {})
+    # Asegurar claves conocidas y sumar
+    tipos_noncash = ['cheques','tarjetas','vales','transferencias','recibos','depositos','otros']
     noncash_total_sum = 0.0
-    # Sum all aggregated non-cash types
-    for k, v in noncash_aggregated.items():
+    noncash_by_type = {}
+    for tipo in tipos_noncash:
         try:
-            noncash_total_sum += float(v)
+            val = float(noncash_aggregated.get(tipo) or 0)
         except:
-            pass
+            val = 0.0
+        noncash_by_type[tipo] = val
+        noncash_total_sum += val
 
     # facturas contado (range) - nuevo formato con 3 tipos
     fc = data.get('fact_contado', {})
@@ -76,7 +80,8 @@ def compute_totals(data):
             credito_total += float(item.get('monto') or 0)
         except:
             pass
-    balance_general = cash_total + cheques + tarjetas + vales + transferencias + recibos
+    # Balance general = efectivo + total no efectivo
+    balance_general = cash_total + noncash_total_sum
     total_facturado_al_contado = fc_monto
     diferencia = balance_general - total_facturado_al_contado
     total_no_efectivo = noncash_total_sum
@@ -90,7 +95,7 @@ def compute_totals(data):
         'total_no_efectivo': total_no_efectivo
     }
     # Add individual noncash types to result for easy access in PDF
-    for k, v in noncash_aggregated.items():
+    for k, v in noncash_by_type.items():
         result[k] = float(v)
     return result
 
@@ -511,145 +516,6 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     y = check_page_break(cpdf, y, height, x_margin, min_space=60)
     cpdf.setFont("Helvetica-Oblique", 9)
     cpdf.drawString(x_margin, 40, f"Generado: {created_at}")
-    cpdf.showPage()
-    cpdf.save()
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name=f"arqueo_{arqueo_id}.pdf", mimetype='application/pdf')
-
-if __name__ == '__main__':
-    app.run(debug=True)
-    noncash = json.loads(noncash_json or '{}')
-    noncash_list = json.loads(noncash_list_json or '[]')
-    invoices = json.loads(invoices_json or '{}')
-    totals = json.loads(totals_json or '{}')
-    
-    return generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash, noncash_list, invoices, totals, created_at)
-
-def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash, noncash_list, invoices, totals, created_at):
-    # generate PDF (Letter size)
-    buffer = io.BytesIO()
-    cpdf = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
-    x_margin = 40
-    y = height - 40
-    cpdf.setFont("Helvetica-Bold", 14)
-    cpdf.drawString(x_margin, y, "ARQUEO DE CAJA")
-    cpdf.setFont("Helvetica", 10)
-    y -= 20
-    cpdf.drawString(x_margin, y, f"ID: {arqueo_id}    Fecha: {date}    Turno: {shift}")
-    y -= 14
-    cpdf.drawString(x_margin, y, f"Cajero/a: {cashier}    Fondo inicial: {starting_fund}")
-    y -= 20
-    cpdf.setFont("Helvetica-Bold", 12)
-    cpdf.drawString(x_margin, y, "Desglose de billetes y monedas:")
-    y -= 16
-    cpdf.setFont("Helvetica", 10)
-    for denom in sorted(counts.keys(), key=lambda x: -int(x)):
-        qty = counts.get(denom,0)
-        try:
-            subtotal = int(qty) * int(denom)
-        except:
-            subtotal = 0
-        cpdf.drawString(x_margin, y, f"{denom} x {qty} = {subtotal:.2f}")
-        y -= 12
-    y -= 6
-    cpdf.drawString(x_margin, y, f"Efectivo (total): {totals.get('cash_total',0):.2f}")
-    y -= 14
-    cpdf.drawString(x_margin, y, f"Cheques: {totals.get('cheques',0):.2f}    Tarjetas: {totals.get('tarjetas',0):.2f}    Vales: {totals.get('vales',0):.2f}")
-    y -= 14
-    cpdf.drawString(x_margin, y, f"Transferencias: {totals.get('transferencias',0):.2f}    Recibos: {totals.get('recibos',0):.2f}")
-    
-    # Detalle de entradas no efectivo
-    if noncash_list:
-        y -= 16
-        cpdf.setFont("Helvetica-Bold", 12)
-        cpdf.drawString(x_margin, y, "Detalle de entradas no efectivo:")
-        y -= 14
-        cpdf.setFont("Helvetica", 10)
-        
-        # Agrupar por tipo para mejor visualización
-        noncash_by_type = {}
-        for item in noncash_list:
-            tipo = item.get('tipo', 'otros')
-            if tipo not in noncash_by_type:
-                noncash_by_type[tipo] = []
-            noncash_by_type[tipo].append(item)
-        
-        for tipo, items in noncash_by_type.items():
-            tipo_total = sum(item.get('monto', 0) for item in items)
-            cpdf.setFont("Helvetica-Bold", 10)
-            cpdf.drawString(x_margin, y, f"{tipo.capitalize()}: ${tipo_total:.2f}")
-            y -= 12
-            cpdf.setFont("Helvetica", 9)
-            
-            for item in items:
-                descripcion = item.get('descripcion', '')
-                monto = item.get('monto', 0)
-                descripcion_text = f" - {descripcion}" if descripcion else ""
-                cpdf.drawString(x_margin + 20, y, f"${monto:.2f}{descripcion_text}")
-                y -= 10
-                if y < 80:
-                    cpdf.showPage()
-                    y = height - 40
-            y -= 2
-    
-    y -= 10
-    
-    y -= 18
-    cpdf.setFont("Helvetica-Bold", 12)
-    cpdf.drawString(x_margin, y, "Facturas al contado:")
-    y -= 14
-    cpdf.setFont("Helvetica", 10)
-    fc = invoices.get('fact_contado') or {}
-    
-    # Nuevo formato con 3 tipos
-    if isinstance(fc, dict) and any(k in fc for k in ['consumidor_final', 'consumidor_fiscal', 'recibos']):
-        for tipo in ['consumidor_final', 'consumidor_fiscal', 'recibos']:
-            tipo_data = fc.get(tipo, {})
-            if isinstance(tipo_data, dict) and tipo_data.get('monto', 0) > 0:
-                if tipo == 'consumidor_fiscal':
-                    tipo_nombre = 'Comprobante Fiscal'
-                else:
-                    tipo_nombre = tipo.replace('_', ' ').title()
-                cpdf.drawString(x_margin, y, f"{tipo_nombre}: Desde {tipo_data.get('desde','')} Hasta {tipo_data.get('hasta','')} Monto: {tipo_data.get('monto',0):.2f}")
-                y -= 12
-    else:
-        # Formato antiguo (compatibilidad)
-        cpdf.drawString(x_margin, y, f"Desde: {fc.get('desde','')}    Hasta: {fc.get('hasta','')}    Monto: {fc.get('monto',0):.2f}")
-        y -= 12
-    
-    y -= 16
-    cpdf.setFont("Helvetica-Bold", 12)
-    cpdf.drawString(x_margin, y, "Facturas a crédito (lista):")
-    y -= 14
-    cpdf.setFont("Helvetica", 10)
-    for item in invoices.get('fact_credito',[]) :
-        cpdf.drawString(x_margin, y, f"Tipo: {item.get('tipo')}  Nº: {item.get('numero')}  Monto: {item.get('monto')}")
-        y -= 12
-        if y < 80:
-            cpdf.showPage()
-            y = height - 40
-    y -= 10
-    cpdf.setFont("Helvetica-Bold", 12)
-    cpdf.drawString(x_margin, y, "Resumen:")
-    y -= 16
-    cpdf.setFont("Helvetica", 11)
-    cpdf.drawString(x_margin, y, f"Efectivo: {totals.get('cash_total',0):.2f}")
-    y -= 14
-    cpdf.drawString(x_margin, y, f"No Efectivo: {totals.get('total_no_efectivo',0):.2f}")
-    y -= 14
-    cpdf.drawString(x_margin, y, f"Balance general: {totals.get('balance_general',0):.2f}")
-    y -= 14
-    cpdf.drawString(x_margin, y, f"Total facturado al contado: {totals.get('total_facturado_al_contado',0):.2f}")
-    y -= 14
-    cpdf.drawString(x_margin, y, f"Total facturas crédito: {totals.get('credito_total',0):.2f}")
-    y -= 14
-    diff = totals.get('diferencia',0)
-    color = "SOBRA" if diff>0 else ("FALTA" if diff<0 else "CUADRADO")
-    cpdf.drawString(x_margin, y, f"Diferencia: {diff:.2f}  ({color})")
-    y -= 30
-    cpdf.setFont("Helvetica-Oblique",9)
-    cpdf.drawString(x_margin, y, f"Generado: {created_at}")
     cpdf.showPage()
     cpdf.save()
     buffer.seek(0)
