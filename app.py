@@ -349,11 +349,11 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     col2_x_total = x_margin + 370
 
     cpdf.drawString(col1_x_cant, y, "CANT")
-    cpdf.drawString(col1_x_denom, y, "DENOMINACION")
+    cpdf.drawString(col1_x_denom, y, "DENOMIN.")
     cpdf.drawString(col1_x_total, y, "TOTAL")
 
     cpdf.drawString(col2_x_cant, y, "CANT")
-    cpdf.drawString(col2_x_denom, y, "DENOMINACION")
+    cpdf.drawString(col2_x_denom, y, "DENOMIN.")
     cpdf.drawString(col2_x_total, y, "TOTAL")
     y -= 12
 
