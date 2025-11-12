@@ -77,7 +77,6 @@ def compute_totals(data):
         except:
             pass
     balance_general = cash_total + cheques + tarjetas + vales + transferencias + recibos
-    balance_general = cash_total + noncash_total_sum # Use the sum of all noncash types
     total_facturado_al_contado = fc_monto
     diferencia = balance_general - total_facturado_al_contado
     total_no_efectivo = noncash_total_sum
@@ -225,12 +224,14 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     y = height - 40
 
     # --- HEADER ---
+    cpdf.setFont("Helvetica-Bold", 14)
     cpdf.setFont("Helvetica-Bold", 16)
     cpdf.drawCentredString(width / 2, y, "ARQUEO DE CAJA")
     y -= 20
     _draw_line(cpdf, y, x_margin, width - x_margin)
     y -= 15
 
+    cpdf.setFont("Helvetica", 11)
     cpdf.setFont("Helvetica", 10)
     cpdf.drawString(x_margin, y, f"CAJERO/A: {cashier}")
     cpdf.drawString(x_margin + 200, y, f"FECHA: {date}")
@@ -240,10 +241,12 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     y -= 20
 
     # --- DESGLOSE DE ARQUEO ---
+    cpdf.setFont("Helvetica-Bold", 13)
     cpdf.setFont("Helvetica-Bold", 12)
     y = check_page_break(cpdf, y, height, x_margin)
     cpdf.drawString(x_margin, y, "DESGLOSE DE ARQUEO")
     y -= 15
+    cpdf.setFont("Helvetica", 11)
     cpdf.setFont("Helvetica", 10)
 
     total_facturado_al_contado = totals.get('total_facturado_al_contado', 0)
@@ -261,10 +264,12 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     y -= 20
 
     # --- BALANCE GENERAL (detailed) ---
+    cpdf.setFont("Helvetica-Bold", 13)
     cpdf.setFont("Helvetica-Bold", 12)
     y = check_page_break(cpdf, y, height, x_margin)
     cpdf.drawString(x_margin, y, "BALANCE GENERAL")
     y -= 15
+    cpdf.setFont("Helvetica", 11)
     cpdf.setFont("Helvetica", 10)
     cpdf.drawString(x_margin, y, f"EFECTIVO: {totals.get('cash_total',0):.2f}")
     y -= 12
@@ -288,10 +293,12 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     y -= 20
 
     # --- FACTURAS EN EFECTIVO AL CONTADO ---
+    cpdf.setFont("Helvetica-Bold", 13)
     cpdf.setFont("Helvetica-Bold", 12)
     y = check_page_break(cpdf, y, height, x_margin)
     cpdf.drawString(x_margin, y, "FACTURAS EN EFECTIVO AL CONTADO")
     y -= 15
+    cpdf.setFont("Helvetica", 11)
     cpdf.setFont("Helvetica", 10)
 
     fc = invoices.get('fact_contado') or {}
@@ -327,10 +334,12 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     y -= 20
 
     # --- DESGLOSE DE EFECTIVO ---
+    cpdf.setFont("Helvetica-Bold", 13)
     cpdf.setFont("Helvetica-Bold", 12)
     y = check_page_break(cpdf, y, height, x_margin)
     cpdf.drawString(x_margin, y, "DESGLOSE DE EFECTIVO")
     y -= 15
+    cpdf.setFont("Helvetica", 11)
     cpdf.setFont("Helvetica", 10)
 
     denoms_col1 = [2000, 1000, 500, 200, 100, 50]
@@ -396,6 +405,7 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
 
     # --- ENTRADA NO EFECTIVO (Detalle) ---
     if noncash_list:
+        cpdf.setFont("Helvetica-Bold", 13)
         cpdf.setFont("Helvetica-Bold", 12)
         y = check_page_break(cpdf, y, height, x_margin)
         cpdf.drawString(x_margin, y, "ENTRADA NO EFECTIVO (Detalle)")
@@ -430,6 +440,7 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
         y -= 20
 
     # --- FACTURAS A CREDITO ---
+    cpdf.setFont("Helvetica-Bold", 13)
     cpdf.setFont("Helvetica-Bold", 12)
     y = check_page_break(cpdf, y, height, x_margin)
     cpdf.drawString(x_margin, y, "FACTURAS A CREDITO")
@@ -516,6 +527,7 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     cpdf.save()
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=f"arqueo_{arqueo_id}.pdf", mimetype='application/pdf')
+    
 
 if __name__ == '__main__':
     app.run(debug=True)
