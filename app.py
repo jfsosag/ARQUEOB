@@ -521,5 +521,193 @@ def generate_pdf(arqueo_id, date, cashier, shift, starting_fund, counts, noncash
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=f"arqueo_{arqueo_id}.pdf", mimetype='application/pdf')
 
+@app.route('/generate_conduce', methods=['POST'])
+def generate_conduce():
+    data = request.get_json()
+    
+    # Validar datos requeridos
+    if not data.get('cliente') or not data.get('direccion') or not data.get('descripcion'):
+        return jsonify({'error': 'Faltan datos requeridos'}), 400
+    
+    # Generar PDF directamente sin guardar en BD
+    return generate_conduce_pdf_format(data)
+
+def generate_conduce_pdf_format(data):
+    buffer = io.BytesIO()
+    cpdf = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    empresa = data.get('empresa', {})
+    emp_nombre   = empresa.get('nombre',   'HECTOR JUSTINADO LOPEZ')
+    emp_tel      = empresa.get('telefono', '809-575-4401')
+    emp_rnc      = empresa.get('rnc',      '1-33-08894-2')
+    emp_dir      = empresa.get('direccion','CALLE 2 NO.5 LOS CIRUELITOS, SANTIAGO R.D')
+
+    cliente      = data.get('cliente', '')
+    direccion    = data.get('direccion', '')
+    factura      = data.get('factura', '')
+    bulto        = data.get('bulto', '')
+    descripcion  = data.get('descripcion', '')
+    observaciones= data.get('observaciones', 'EL PAQUETE SE ENTREGA EN BUENAS CONDICIONES Y DEBE SER RECIBIDO CONFORME POR EL DESTINATARIO.')
+
+    # Formatear fecha dd/mm/yyyy
+    fecha_raw = data.get('fecha', '')
+    try:
+        fecha_fmt = datetime.datetime.strptime(fecha_raw, '%Y-%m-%d').strftime('%d/%m/%Y')
+    except Exception:
+        fecha_fmt = fecha_raw
+
+    def wrap_text(text, max_chars):
+        """Divide texto en líneas de max_chars caracteres."""
+        words = text.split()
+        lines, current = [], ''
+        for w in words:
+            if len(current) + len(w) + 1 <= max_chars:
+                current = (current + ' ' + w).strip()
+            else:
+                if current:
+                    lines.append(current)
+                current = w
+        if current:
+            lines.append(current)
+        return lines
+
+    def draw_conduce(top_y):
+        """Dibuja un conduce completo. top_y = coordenada Y del borde superior del recuadro."""
+        mx = 40          # margen horizontal
+        bw = width - 2 * mx   # ancho del recuadro
+        bh = 255         # alto del recuadro
+        box_x = mx
+        box_y = top_y - bh
+
+        # Recuadro exterior
+        cpdf.setLineWidth(1.2)
+        cpdf.rect(box_x, box_y, bw, bh)
+
+        # ---- Fila 1: nombre empresa (izq) + CONDUCE DE ENVIO (der) ----
+        y = top_y - 16
+        cpdf.setFont("Helvetica-Bold", 11)
+        cpdf.drawString(box_x + 8, y, emp_nombre)
+        cpdf.drawRightString(box_x + bw - 8, y, "CONDUCE DE ENVIO")
+
+        # ---- Fila 2: clinica + tel + rnc ----
+        y -= 14
+        cpdf.setFont("Helvetica", 9)
+        cpdf.drawString(box_x + 8, y, f"CLINICA DE FRENOS  TEL: {emp_tel}  RNC: {emp_rnc}")
+
+        # ---- Fila 3: dirección empresa ----
+        y -= 13
+        cpdf.drawString(box_x + 8, y, emp_dir)
+
+        # ---- Fila 4: fecha ----
+        y -= 13
+        cpdf.drawString(box_x + 8, y, f"FECHA: {fecha_fmt}")
+
+        # ---- Separador fino ----
+        y -= 8
+        cpdf.setLineWidth(0.4)
+        cpdf.line(box_x, y, box_x + bw, y)
+        y -= 12
+
+        # ---- Fila: CLIENTE (izq) | BULTO (der) ----
+        cpdf.setFont("Helvetica-Bold", 9)
+        cpdf.drawString(box_x + 8, y, "CLIENTE:")
+        cpdf.setFont("Helvetica", 9)
+        cpdf.drawString(box_x + 58, y, cliente)
+        # línea punteada bajo el valor
+        cpdf.setLineWidth(0.3)
+        cpdf.setDash(2, 2)
+        cpdf.line(box_x + 58, y - 2, box_x + bw//2 - 10, y - 2)
+        cpdf.setDash()
+
+        cpdf.setFont("Helvetica-Bold", 9)
+        cpdf.drawString(box_x + bw//2 + 10, y, "BULTO:")
+        cpdf.setFont("Helvetica", 9)
+        cpdf.drawString(box_x + bw//2 + 50, y, str(bulto))
+        cpdf.setLineWidth(0.3)
+        cpdf.setDash(2, 2)
+        cpdf.line(box_x + bw//2 + 50, y - 2, box_x + bw - 8, y - 2)
+        cpdf.setDash()
+
+        # ---- Fila: DIRECCION (izq) | NO FACTURA (der) ----
+        y -= 16
+        cpdf.setFont("Helvetica-Bold", 9)
+        cpdf.drawString(box_x + 8, y, "DIRECCION:")
+        cpdf.setFont("Helvetica", 9)
+        cpdf.drawString(box_x + 65, y, direccion[:45])
+        cpdf.setLineWidth(0.3)
+        cpdf.setDash(2, 2)
+        cpdf.line(box_x + 65, y - 2, box_x + bw//2 - 10, y - 2)
+        cpdf.setDash()
+
+        cpdf.setFont("Helvetica-Bold", 9)
+        cpdf.drawString(box_x + bw//2 + 10, y, "NO FACTURA:")
+        cpdf.setFont("Helvetica", 9)
+        cpdf.drawString(box_x + bw//2 + 75, y, factura)
+        cpdf.setLineWidth(0.3)
+        cpdf.setDash(2, 2)
+        cpdf.line(box_x + bw//2 + 75, y - 2, box_x + bw - 8, y - 2)
+        cpdf.setDash()
+
+        # ---- DESCRIPCION DEL CONTENIDO ----
+        y -= 18
+        cpdf.setFont("Helvetica-Bold", 9)
+        cpdf.drawString(box_x + 8, y, "DESCRIPCION DEL CONTENIDO")
+        cpdf.setLineWidth(0.3)
+        cpdf.setDash(2, 2)
+        cpdf.line(box_x + 8, y - 3, box_x + bw - 8, y - 3)
+        cpdf.setDash()
+
+        # Líneas de descripción
+        desc_lines = wrap_text(descripcion, 95)
+        y -= 14
+        cpdf.setFont("Helvetica", 9)
+        cpdf.drawString(box_x + 16, y, "-   " + (desc_lines[0] if desc_lines else "Detalle de los Productos"))
+        for extra_line in desc_lines[1:3]:
+            y -= 12
+            cpdf.drawString(box_x + 28, y, extra_line)
+
+        # Líneas en blanco adicionales
+        for _ in range(max(0, 2 - len(desc_lines))):
+            y -= 12
+            cpdf.setLineWidth(0.3)
+            cpdf.setDash(2, 2)
+            cpdf.line(box_x + 8, y, box_x + bw - 8, y)
+            cpdf.setDash()
+
+        # ---- OBSERVACIONES ----
+        y -= 18
+        cpdf.setFont("Helvetica-Bold", 9)
+        cpdf.drawString(box_x + 8, y, "OBSERVACIONES:")
+        y -= 13
+        cpdf.setFont("Helvetica", 8)
+        obs_lines = wrap_text(observaciones, 110)
+        for line in obs_lines[:2]:
+            cpdf.drawString(box_x + 8, y, line)
+            y -= 11
+
+        # ---- FIRMAS ----
+        firma_y = box_y + 38
+        cpdf.setFont("Helvetica", 9)
+        # Líneas de firma
+        cpdf.setLineWidth(0.8)
+        cpdf.line(box_x + 50,  firma_y, box_x + 200, firma_y)
+        cpdf.line(box_x + 290, firma_y, box_x + 440, firma_y)
+        # Etiquetas centradas bajo las líneas
+        cpdf.setFont("Helvetica-Bold", 9)
+        cpdf.drawCentredString(box_x + 125, firma_y - 14, "RECIBIDO POR")
+        cpdf.drawCentredString(box_x + 365, firma_y - 14, "ENTREGADO POR")
+
+    # ---- Dos conduces por página ----
+    draw_conduce(height - 30)          # copia superior
+    draw_conduce(height - 30 - 280)    # copia inferior
+
+    cpdf.showPage()
+    cpdf.save()
+    buffer.seek(0)
+
+    nombre_archivo = f"conduce_{data.get('cliente','cliente').replace(' ','_')}_{fecha_raw}.pdf"
+    return send_file(buffer, as_attachment=True, download_name=nombre_archivo, mimetype='application/pdf')
+
 if __name__ == '__main__':
     app.run(debug=True)
