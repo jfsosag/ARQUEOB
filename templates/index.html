@@ -36,6 +36,11 @@
             Conduce de Envío
           </button>
         </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="recibo-tab" data-bs-toggle="tab" data-bs-target="#recibo-pane" type="button" role="tab" aria-selected="false">
+            Recibo de Cobro
+          </button>
+        </li>
       </ul>
 
       <!-- ===== TAB CONTENT ===== -->
@@ -238,6 +243,52 @@
           </div>
 
         </div><!-- end #conduce-pane -->
+
+        <!-- ========== TAB 3: RECIBO DE COBRO ========== -->
+        <div class="tab-pane fade" id="recibo-pane" role="tabpanel" aria-labelledby="recibo-tab">
+
+          <div class="card p-2" style="max-width:420px;">
+            <h6 class="mb-2 fw-bold">Recibo de Cobro</h6>
+
+            <div class="row g-1 mb-1">
+              <div class="col-12">
+                <label class="form-label form-label-sm mb-0">Cliente</label>
+                <input id="recibo_cliente" class="form-control form-control-sm" placeholder="Nombre del cliente">
+              </div>
+            </div>
+            <div class="row g-1 mb-1">
+              <div class="col-4">
+                <label class="form-label form-label-sm mb-0">Fecha</label>
+                <input id="recibo_fecha" type="date" class="form-control form-control-sm" value="{{ today }}">
+              </div>
+              <div class="col-8">
+                <label class="form-label form-label-sm mb-0">Concepto</label>
+                <input id="recibo_concepto" class="form-control form-control-sm" placeholder="Descripción del cobro">
+              </div>
+            </div>
+            <div class="row g-1 mb-1">
+              <div class="col-4">
+                <label class="form-label form-label-sm mb-0">Deuda Total</label>
+                <input id="recibo_deuda" type="number" step="0.01" class="form-control form-control-sm" placeholder="0.00">
+              </div>
+              <div class="col-4">
+                <label class="form-label form-label-sm mb-0">Monto Pagado</label>
+                <input id="recibo_pagado" type="number" step="0.01" class="form-control form-control-sm" placeholder="0.00">
+              </div>
+              <div class="col-4">
+                <label class="form-label form-label-sm mb-0">Saldo Pendiente</label>
+                <input id="recibo_saldo" type="number" step="0.01" class="form-control form-control-sm" placeholder="0.00" readonly>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-2">
+              <button id="generateRecibo" class="btn btn-primary btn-sm px-4">Generar Recibo</button>
+              <button id="clearRecibo" class="btn btn-outline-secondary btn-sm">Limpiar</button>
+            </div>
+            <div id="reciboStatus" class="mt-2"></div>
+          </div>
+
+        </div><!-- end #recibo-pane -->
 
       </div><!-- end .tab-content -->
 
@@ -447,6 +498,50 @@ document.getElementById('clearConduce').addEventListener('click', () => {
   document.getElementById('conduce_descripcion').value = '';
   document.getElementById('conduce_observaciones').value = 'EL PAQUETE SE ENTREGA EN BUENAS CONDICIONES Y DEBE SER RECIBIDO CONFORME POR EL DESTINATARIO.';
   document.getElementById('conduceStatus').innerHTML = '';
+});
+
+// ===== RECIBO DE COBRO =====
+document.getElementById('recibo_deuda').addEventListener('input', calcularSaldo);
+document.getElementById('recibo_pagado').addEventListener('input', calcularSaldo);
+
+function calcularSaldo() {
+  const deuda  = parseFloat(document.getElementById('recibo_deuda').value)  || 0;
+  const pagado = parseFloat(document.getElementById('recibo_pagado').value) || 0;
+  document.getElementById('recibo_saldo').value = Math.max(0, deuda - pagado).toFixed(2);
+}
+
+document.getElementById('generateRecibo').addEventListener('click', () => {
+  const data = {
+    cliente:  document.getElementById('recibo_cliente').value,
+    fecha:    document.getElementById('recibo_fecha').value,
+    concepto: document.getElementById('recibo_concepto').value,
+    deuda:    parseFloat(document.getElementById('recibo_deuda').value)  || 0,
+    pagado:   parseFloat(document.getElementById('recibo_pagado').value) || 0,
+    saldo:    parseFloat(document.getElementById('recibo_saldo').value)  || 0
+  };
+  if (!data.cliente) { alert('Por favor ingrese el nombre del cliente'); return; }
+  const btn = document.getElementById('generateRecibo');
+  const orig = btn.innerHTML;
+  btn.innerHTML = 'Generando...'; btn.disabled = true;
+  fetch('/generate_recibo', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) })
+    .then(r => { if (!r.ok) throw new Error('HTTP '+r.status); return r.blob(); })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `recibo_${data.cliente.replace(/\s+/g,'_')}_${data.fecha}.pdf`;
+      document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); a.remove();
+      document.getElementById('reciboStatus').innerHTML = '<div class="alert alert-success py-1">Recibo generado</div>';
+      btn.innerHTML = 'Generado ✓';
+      setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2000);
+    })
+    .catch(err => { alert('Error: '+err.message); btn.innerHTML = orig; btn.disabled = false; });
+});
+
+document.getElementById('clearRecibo').addEventListener('click', () => {
+  ['recibo_cliente','recibo_concepto','recibo_deuda','recibo_pagado','recibo_saldo'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('reciboStatus').innerHTML = '';
 });
 </script>
   </body>

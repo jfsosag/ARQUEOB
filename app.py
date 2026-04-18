@@ -709,5 +709,117 @@ def generate_conduce_pdf_format(data):
     nombre_archivo = f"conduce_{data.get('cliente','cliente').replace(' ','_')}_{fecha_raw}.pdf"
     return send_file(buffer, as_attachment=True, download_name=nombre_archivo, mimetype='application/pdf')
 
+@app.route('/generate_recibo', methods=['POST'])
+def generate_recibo():
+    data = request.get_json()
+    if not data.get('cliente'):
+        return jsonify({'error': 'Falta el cliente'}), 400
+
+    # Tamaño rollo 80mm: ancho=226pt, alto dinámico (usamos 400pt)
+    roll_w = 226
+    roll_h = 400
+    buffer = io.BytesIO()
+    cpdf = canvas.Canvas(buffer, pagesize=(roll_w, roll_h))
+
+    # Formatear fecha
+    fecha_raw = data.get('fecha', '')
+    try:
+        fecha_fmt = datetime.datetime.strptime(fecha_raw, '%Y-%m-%d').strftime('%d/%m/%Y')
+    except Exception:
+        fecha_fmt = fecha_raw
+
+    mx = 8   # margen horizontal
+    y  = roll_h - 12
+
+    def line_sep(y_pos, dashed=False):
+        cpdf.setLineWidth(0.5)
+        if dashed:
+            cpdf.setDash(2, 2)
+        cpdf.line(mx, y_pos, roll_w - mx, y_pos)
+        cpdf.setDash()
+
+    def center(text, y_pos, font="Helvetica", size=8):
+        cpdf.setFont(font, size)
+        cpdf.drawCentredString(roll_w / 2, y_pos, text)
+
+    def left(text, y_pos, font="Helvetica", size=8):
+        cpdf.setFont(font, size)
+        cpdf.drawString(mx, y_pos, text)
+
+    def right(text, y_pos, font="Helvetica", size=8):
+        cpdf.setFont(font, size)
+        cpdf.drawRightString(roll_w - mx, y_pos, text)
+
+    # ---- Encabezado empresa ----
+    center("HECTOR JUSTINADO LOPEZ", y, "Helvetica-Bold", 9); y -= 12
+    center("CLINICA DE FRENOS", y, "Helvetica-Bold", 8); y -= 11
+    center("TEL: 809-575-4401  RNC: 1-33-08894-2", y, "Helvetica", 7); y -= 10
+    center("CALLE 2 NO.5 LOS CIRUELITOS", y, "Helvetica", 7); y -= 10
+    center("SANTIAGO R.D", y, "Helvetica", 7); y -= 8
+
+    line_sep(y); y -= 10
+
+    # ---- Título ----
+    center("RECIBO DE COBRO", y, "Helvetica-Bold", 10); y -= 12
+
+    line_sep(y); y -= 10
+
+    # ---- Datos del recibo ----
+    left(f"Fecha:    {fecha_fmt}", y); y -= 11
+    left(f"Cliente:  {data.get('cliente','')}", y); y -= 11
+
+    concepto = data.get('concepto', '')
+    if concepto:
+        # Wrap concepto si es largo
+        words = concepto.split()
+        lines, cur = [], ''
+        for w in words:
+            if len(cur) + len(w) + 1 <= 32:
+                cur = (cur + ' ' + w).strip()
+            else:
+                lines.append(cur); cur = w
+        if cur: lines.append(cur)
+        left(f"Concepto: {lines[0]}", y); y -= 11
+        for l in lines[1:]:
+            left(f"          {l}", y); y -= 11
+
+    y -= 4
+    line_sep(y, dashed=True); y -= 10
+
+    # ---- Montos ----
+    deuda  = data.get('deuda',  0)
+    pagado = data.get('pagado', 0)
+    saldo  = data.get('saldo',  0)
+
+    cpdf.setFont("Helvetica", 8)
+    cpdf.drawString(mx, y, "Deuda total:")
+    right(f"RD$ {deuda:,.2f}", y); y -= 11
+
+    cpdf.drawString(mx, y, "Monto pagado:")
+    right(f"RD$ {pagado:,.2f}", y); y -= 11
+
+    line_sep(y, dashed=True); y -= 10
+
+    cpdf.setFont("Helvetica-Bold", 9)
+    cpdf.drawString(mx, y, "Saldo pendiente:")
+    cpdf.drawRightString(roll_w - mx, y, f"RD$ {saldo:,.2f}"); y -= 14
+
+    line_sep(y); y -= 14
+
+    # ---- Firma ----
+    center("_______________________", y, size=8); y -= 11
+    center("Firma / Sello", y, "Helvetica", 7); y -= 18
+
+    # ---- Pie ----
+    center("Gracias por su pago", y, "Helvetica-Oblique", 7); y -= 10
+    center(datetime.datetime.now().strftime("Emitido: %d/%m/%Y %H:%M"), y, "Helvetica", 6)
+
+    cpdf.showPage()
+    cpdf.save()
+    buffer.seek(0)
+
+    nombre = f"recibo_{data.get('cliente','').replace(' ','_')}_{fecha_raw}.pdf"
+    return send_file(buffer, as_attachment=True, download_name=nombre, mimetype='application/pdf')
+
 if __name__ == '__main__':
     app.run(debug=True)
