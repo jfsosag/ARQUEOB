@@ -751,8 +751,8 @@ def generate_recibo():
         cpdf.drawRightString(roll_w - mx, y_pos, text)
 
     # ---- Encabezado empresa ----
-    center("HECTOR JUSTINADO LOPEZ", y, "Helvetica-Bold", 9); y -= 12
-    center("CLINICA DE FRENOS", y, "Helvetica-Bold", 8); y -= 11
+    center("CLINICA DE FRENOS", y, "Helvetica-Bold", 10); y -= 12
+    center("HECTOR LOPEZ SRL", y, "Helvetica-Bold", 9); y -= 11
     center("TEL: 809-575-4401  RNC: 1-33-08894-2", y, "Helvetica", 7); y -= 10
     center("CALLE 2 NO.5 LOS CIRUELITOS", y, "Helvetica", 7); y -= 10
     center("SANTIAGO R.D", y, "Helvetica", 7); y -= 8
