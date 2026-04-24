@@ -717,8 +717,8 @@ def generate_recibo():
 
     # Tamaño rollo 80mm: ancho=226pt
     roll_w = 226
-    copy_h = 200   # alto de cada copia
-    roll_h = copy_h * 2 + 20  # dos copias + espacio entre ellas
+    copy_h = 215   # alto de cada copia
+    roll_h = copy_h  # una copia por página
 
     buffer = io.BytesIO()
     cpdf = canvas.Canvas(buffer, pagesize=(roll_w, roll_h))
@@ -746,8 +746,9 @@ def generate_recibo():
     def draw_copy(y_start, label):
         y = y_start
 
-        # ---- Título principal en una sola línea ----
-        center("CLINICA DE FRENOS HECTOR LOPEZ SRL", y, "Helvetica-Bold", 8); y -= 10
+        # ---- Encabezado ----
+        center("CLINICA DE FRENOS", y, "Helvetica-Bold", 12); y -= 13
+        center("HECTOR LOPEZ SRL", y, "Helvetica-Bold", 9); y -= 10
         center("TEL: 809-575-4401  RNC: 1-33-08894-2", y, "Helvetica", 7); y -= 9
         center("CALLE 2 NO.5 LOS CIRUELITOS, SANTIAGO R.D", y, "Helvetica", 7); y -= 7
 
@@ -806,14 +807,10 @@ def generate_recibo():
         center("Gracias por su pago", y, "Helvetica-Oblique", 7); y -= 9
         center(datetime.datetime.now().strftime("Emitido: %d/%m/%Y %H:%M"), y, "Helvetica", 6)
 
-    # Dibujar dos copias
+    # Dibujar dos copias en páginas separadas
     draw_copy(roll_h - 10, "ORIGINAL")
-    # Línea de corte entre copias
-    cpdf.setDash(3, 3)
-    cpdf.setLineWidth(0.5)
-    cpdf.line(0, copy_h + 10, roll_w, copy_h + 10)
-    cpdf.setDash()
-    draw_copy(copy_h + 5, "COPIA")
+    cpdf.showPage()
+    draw_copy(roll_h - 10, "COPIA")
 
     cpdf.showPage()
     cpdf.save()
