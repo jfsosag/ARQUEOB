@@ -27,7 +27,10 @@ class Usuario(UserMixin, db.Model):
         self.password_hash = bcrypt.hashpw(raw.encode(), bcrypt.gensalt()).decode()
 
     def check_password(self, raw: str) -> bool:
-        return bcrypt.checkpw(raw.encode(), self.password_hash.encode())
+        try:
+            return bcrypt.checkpw(raw.encode(), self.password_hash.encode())
+        except (ValueError, TypeError):
+            return False
 
     # ---- permission helpers ----
     def tiene_permiso(self, modulo: str) -> bool:

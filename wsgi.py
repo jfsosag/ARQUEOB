@@ -15,7 +15,8 @@ try:
         from app.extensions import db
         from app.models.usuario import Usuario
         db.create_all()
-        if not db.session.scalar(db.select(Usuario).where(Usuario.username == "admin")):
+        admin = db.session.scalar(db.select(Usuario).where(Usuario.username == "admin"))
+        if not admin:
             admin = Usuario(
                 nombre_completo="Administrador",
                 username="admin",
@@ -23,12 +24,13 @@ try:
                 is_active=True,
                 is_admin=True,
             )
-            admin.set_password("admin123")
             db.session.add(admin)
+        if not admin.check_password("admin123"):
+            admin.set_password("admin123")
             db.session.commit()
-            print("Usuario admin creado.")
+            print("Password del usuario admin reseteado.")
         else:
-            print("Usuario admin ya existe.")
+            print("Usuario admin OK.")
     print("App arrancó correctamente.")
 except Exception:
     print("ERROR AL INICIAR:")
