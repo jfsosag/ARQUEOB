@@ -14,6 +14,7 @@ MODULOS_SISTEMA = [
     ("cobros_informales", "Cobro Informal"),
     ("arqueo", "Arqueo de Caja"),
     ("conduces", "Conduce de Envío"),
+    ("reportes", "Reportes"),
     ("configuracion", "Configuración"),
 ]
 
