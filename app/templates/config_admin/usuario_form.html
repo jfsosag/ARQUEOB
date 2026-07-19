@@ -1,0 +1,79 @@
+{% extends 'base.html' %}{% block title %}{{ 'Editar' if usuario else 'Nuevo' }} usuario · ARQUEOB{% endblock %}{% block content %}
+<div class="mb-4">
+  <a class="small text-decoration-none" href="{{ url_for('config_admin.usuarios') }}"><i class="bi bi-arrow-left"></i> Usuarios</a>
+  <h1 class="h3 mt-2">{{ 'Editar' if usuario else 'Nuevo' }} usuario</h1>
+</div>
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} py-2">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
+<form method="post" class="row g-3">
+  <div class="col-lg-8">
+    <section class="card border-0 shadow-sm"><div class="card-body p-3 p-lg-4">
+      <h2 class="h5 mb-3">Datos del usuario</h2>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Nombre completo *</label>
+          <input class="form-control" name="nombre_completo" value="{{ (form_data.nombre_completo or usuario.nombre_completo) if form_data else (usuario.nombre_completo if usuario else '') }}" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Nombre de usuario *</label>
+          <input class="form-control" name="username" value="{{ usuario.username if usuario else '' }}" {{ 'readonly' if usuario else 'required' }}>
+          {% if usuario %}<small class="text-secondary">No se puede modificar.</small>{% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Correo electrónico</label>
+          <input class="form-control" name="email" type="email" value="{{ (form_data.email or usuario.email) if form_data else (usuario.email if usuario else '') }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Teléfono</label>
+          <input class="form-control" name="telefono" value="{{ (form_data.telefono or usuario.telefono) if form_data else (usuario.telefono if usuario else '') }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">{{ 'Nueva contraseña' if usuario else 'Contraseña *' }}</label>
+          <input class="form-control" name="password" type="password" {{ '' if usuario else 'required' }} minlength="6" placeholder="{{ 'Dejar vacío para mantener' if usuario else '' }}">
+        </div>
+        <div class="col-12">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ 'checked' if (usuario.is_active if usuario else True) else '' }}>
+            <label class="form-check-label" for="is_active">Usuario activo</label>
+          </div>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin" {{ 'checked' if (usuario.is_admin if usuario else False) else '' }}>
+            <label class="form-check-label" for="is_admin">Administrador</label>
+          </div>
+        </div>
+      </div>
+    </div></section>
+  </div>
+  <div class="col-lg-4">
+    <section class="card border-0 shadow-sm"><div class="card-body p-3 p-lg-4">
+      <h2 class="h5 mb-3">Permisos por módulo</h2>
+      <p class="small text-secondary">Los administradores tienen acceso completo automáticamente.</p>
+      {% set permisos_actuales = [] %}
+      {% if usuario %}
+        {% for p in usuario.permisos %}{% if permisos_actuales.append(p.modulo) %}{% endif %}{% endfor %}
+      {% endif %}
+      {% for clave, nombre in modulos %}
+        {% if clave != 'configuracion' %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="modulos" value="{{ clave }}" id="mod-{{ clave }}" {{ 'checked' if clave in permisos_actuales or (usuario and usuario.is_admin) else '' }} {{ 'disabled' if usuario and usuario.is_admin else '' }}>
+          <label class="form-check-label" for="mod-{{ clave }}">{{ nombre }}</label>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div></section>
+    <button class="btn btn-primary btn-lg w-100 mt-3"><i class="bi bi-check-circle"></i> {{ 'Guardar cambios' if usuario else 'Crear usuario' }}</button>
+  </div>
+</form>
+
+{% if usuario %}
+<div class="modal fade" id="resetModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Restablecer contraseña</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <form method="post" action="{{ url_for('config_admin.reset_password', uid=usuario.id) }}">
+      <div class="mb-3"><label class="form-label fw-semibold">Nueva contraseña</label><input class="form-control" name="password" type="password" required minlength="6"></div>
+      <button class="btn btn-warning w-100"><i class="bi bi-key"></i> Restablecer contraseña</button>
+    </form>
+  </div>
+</div></div></div>
+<button class="btn btn-outline-warning mt-3" data-bs-toggle="modal" data-bs-target="#resetModal"><i class="bi bi-key"></i> Restablecer contraseña</button>
+{% endif %}
+{% endblock %}

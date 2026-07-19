@@ -1,0 +1,46 @@
+{% extends 'base.html' %}{% block title %}Historial cobros informales · ARQUEOB{% endblock %}{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div><h1 class="h3 mb-1">Cobros informales</h1><p class="text-secondary mb-0">Cobros realizados sin factura asociada.</p></div>
+  <a class="btn btn-primary" href="{{ url_for('cobros_informales.nuevo') }}"><i class="bi bi-plus"></i> Nuevo cobro</a>
+</div>
+<div class="card border-0 shadow-sm"><div class="card-body p-3 p-lg-4">
+  <form class="row g-2 mb-3">
+    <div class="col-md-4"><input class="form-control form-control-lg" name="q" value="{{ q }}" placeholder="Concepto o cliente"></div>
+    <div class="col-md-2">
+      <select class="form-select form-select-lg" name="estado">
+        <option value="">Todos</option>
+        {% for option in ['Pendiente','Pagado'] %}
+        <option {{ 'selected' if estado == option }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-primary btn-lg"><i class="bi bi-search"></i> Buscar</button></div>
+  </form>
+  <div class="table-responsive">
+    <table class="table align-middle table-hover">
+      <thead><tr><th>No.</th><th>Cliente</th><th>Concepto</th><th>Estado</th><th class="text-end">Total</th><th class="text-end">Pagado</th><th class="text-end">Pendiente</th><th class="text-center">Acciones</th></tr></thead>
+      <tbody>
+        {% for c in cobros.items %}
+        <tr>
+          <td>#{{ '%06d'|format(c.id) }}</td>
+          <td><a href="{{ url_for('clientes.detalle', cliente_id=c.cliente.id) }}" class="text-decoration-none">{{ c.cliente.nombre }}</a></td>
+          <td>{{ c.concepto }}</td>
+          <td><span class="badge text-bg-{{ 'success' if c.estado.value == 'Pagado' else 'warning' }}">{{ c.estado.value }}</span></td>
+          <td class="text-end">{{ c.monto_total|currency }}</td>
+          <td class="text-end text-success">{{ c.monto_pagado|currency }}</td>
+          <td class="text-end fw-semibold">{{ c.saldo_pendiente|currency }}</td>
+          <td class="text-center text-nowrap">
+            <a href="{{ url_for('cobros_informales.detalle', cobro_id=c.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalle"><i class="bi bi-eye"></i></a>
+            {% if c.estado.value != 'Pagado' %}<a href="{{ url_for('cobros_informales.abonar', cobro_id=c.id) }}" class="btn btn-sm btn-outline-success" title="Registrar abono"><i class="bi bi-cash"></i></a>{% endif %}
+            <a href="{{ url_for('cobros_informales.recibo', cobro_id=c.id) }}" class="btn btn-sm btn-outline-secondary" title="Recibo PDF"><i class="bi bi-file-pdf"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center text-secondary py-5">No hay cobros informales registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'partials/paginacion.html' %}
+</div></div>
+{% endblock %}

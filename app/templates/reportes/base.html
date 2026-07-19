@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Reportes · ARQUEOB{% endblock %}
+{% block content %}
+
+{# ── Mobile: card menu (shown when no report active) ────────────── #}
+{% if not active %}
+<div class="d-block d-lg-none mb-4">
+  <h1 class="h3 mb-3">Reportes</h1>
+  <div class="d-grid gap-3">
+    <a href="{{ url_for('reportes.facturas') }}" class="card border-0 shadow-sm text-decoration-none">
+      <div class="card-body d-flex align-items-center gap-3 p-3">
+        <div class="rounded bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width:48px;height:48px">
+          <i class="bi bi-receipt text-primary fs-4"></i>
+        </div>
+        <div><div class="fw-semibold text-dark">Reimpresión de Facturas</div><div class="text-secondary small">Consultar y reimprimir facturas emitidas</div></div>
+        <i class="bi bi-chevron-right ms-auto text-secondary"></i>
+      </div>
+    </a>
+    <a href="{{ url_for('reportes.recibos') }}" class="card border-0 shadow-sm text-decoration-none">
+      <div class="card-body d-flex align-items-center gap-3 p-3">
+        <div class="rounded bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width:48px;height:48px">
+          <i class="bi bi-file-earmark-text text-success fs-4"></i>
+        </div>
+        <div><div class="fw-semibold text-dark">Reimpresión de Recibos</div><div class="text-secondary small">Recibos de cobros por facturas e informales</div></div>
+        <i class="bi bi-chevron-right ms-auto text-secondary"></i>
+      </div>
+    </a>
+    <a href="{{ url_for('reportes.cobros') }}" class="card border-0 shadow-sm text-decoration-none">
+      <div class="card-body d-flex align-items-center gap-3 p-3">
+        <div class="rounded bg-warning bg-opacity-10 d-flex align-items-center justify-content-center" style="width:48px;height:48px">
+          <i class="bi bi-cash-stack text-warning fs-4"></i>
+        </div>
+        <div><div class="fw-semibold text-dark">Reporte de Cobros</div><div class="text-secondary small">Todos los cobros realizados por período</div></div>
+        <i class="bi bi-chevron-right ms-auto text-secondary"></i>
+      </div>
+    </a>
+    <a href="{{ url_for('reportes.estado_cuenta') }}" class="card border-0 shadow-sm text-decoration-none">
+      <div class="card-body d-flex align-items-center gap-3 p-3">
+        <div class="rounded bg-info bg-opacity-10 d-flex align-items-center justify-content-center" style="width:48px;height:48px">
+          <i class="bi bi-person-lines-fill text-info fs-4"></i>
+        </div>
+        <div><div class="fw-semibold text-dark">Estado de Cuenta</div><div class="text-secondary small">Consulta por cliente</div></div>
+        <i class="bi bi-chevron-right ms-auto text-secondary"></i>
+      </div>
+    </a>
+    <a href="{{ url_for('reportes.historial_arqueos') }}" class="card border-0 shadow-sm text-decoration-none">
+      <div class="card-body d-flex align-items-center gap-3 p-3">
+        <div class="rounded bg-danger bg-opacity-10 d-flex align-items-center justify-content-center" style="width:48px;height:48px">
+          <i class="bi bi-calculator text-danger fs-4"></i>
+        </div>
+        <div><div class="fw-semibold text-dark">Historial de Arqueos</div><div class="text-secondary small">Arqueos de caja por período</div></div>
+        <i class="bi bi-chevron-right ms-auto text-secondary"></i>
+      </div>
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{# ── Desktop heading + pills / Mobile: section header with back btn ── #}
+<div class="mb-4">
+  {% if active %}
+  <div class="d-flex align-items-center gap-2 mb-2 d-lg-none">
+    <a href="{{ url_for('reportes.recibos') if active == 'recibos' else url_for('reportes.facturas') if active == 'facturas' else url_for('reportes.cobros') if active == 'cobros' else url_for('reportes.estado_cuenta') if active == 'estado_cuenta' else url_for('reportes.historial_arqueos') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 mb-0">Reportes</h1>
+  </div>
+  <h1 class="h3 mb-1 d-none d-lg-block">Reportes</h1>
+  <p class="text-secondary mb-0 d-none d-lg-block">Consultas, reimpresiones y reportes del sistema.</p>
+  {% endif %}
+</div>
+
+{# ── Desktop: pill tabs ──────────────────────────────────────────── #}
+<ul class="nav nav-pills mb-4 flex-nowrap d-none d-lg-flex" style="overflow-x:auto">
+  <li class="nav-item"><a class="nav-link {% if active == 'facturas' %}active{% endif %}" href="{{ url_for('reportes.facturas') }}"><i class="bi bi-receipt me-1"></i> Facturas</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'recibos' %}active{% endif %}" href="{{ url_for('reportes.recibos') }}"><i class="bi bi-file-earmark-text me-1"></i> Recibos</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'cobros' %}active{% endif %}" href="{{ url_for('reportes.cobros') }}"><i class="bi bi-cash-stack me-1"></i> Cobros</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'estado_cuenta' %}active{% endif %}" href="{{ url_for('reportes.estado_cuenta') }}"><i class="bi bi-person-lines-fill me-1"></i> Estado de Cuenta</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'arqueos' %}active{% endif %}" href="{{ url_for('reportes.historial_arqueos') }}"><i class="bi bi-calculator me-1"></i> Arqueos</a></li>
+</ul>
+
+{# ── Mobile: horizontal scroll tabs (compact) ───────────────────── #}
+{% if active %}
+<div class="d-flex d-lg-none gap-1 mb-4" style="overflow-x:auto; -webkit-overflow-scrolling:touch">
+  {% set tabs = [('facturas','Reimpresión de Facturas','bi-receipt'), ('recibos','Recibos','bi-file-earmark-text'), ('cobros','Cobros','bi-cash-stack'), ('estado_cuenta','Estado de Cuenta','bi-person-lines-fill'), ('arqueos','Arqueos','bi-calculator')] %}
+  {% for key, label, icon in tabs %}
+  <a href="{{ url_for('reportes.' + ('facturas' if key=='facturas' else 'recibos' if key=='recibos' else 'cobros' if key=='cobros' else 'estado_cuenta' if key=='estado_cuenta' else 'historial_arqueos')) }}" class="btn btn-sm {% if active == key %}btn-primary{% else %}btn-outline-secondary{% endif %} text-nowrap flex-shrink-0">
+    <i class="bi {{ icon }} me-1"></i>{{ label }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% block reporte_content %}{% endblock %}
+{% endblock %}

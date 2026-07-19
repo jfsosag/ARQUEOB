@@ -1,0 +1,150 @@
+:root{--app-primary:#273b7a;--app-accent:#405cf5;--app-bg:#f4f6fb}
+body{background:var(--app-bg);color:#243047;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+
+/* ---- TOP NAV ---- */
+.app-nav{background:linear-gradient(120deg,#172554,#334fa9);box-shadow:0 2px 12px #17255438}
+.navbar-dark .nav-link{border-radius:.5rem;padding:.55rem .7rem}
+.navbar-dark .nav-link:hover{background:#ffffff1c}
+
+/* ---- BOTTOM NAV ---- */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:1040;
+  background:#fff;
+  box-shadow:0 -2px 12px rgba(0,0,0,.08);
+  display:flex;justify-content:space-around;align-items:center;
+  padding:.35rem 0 calc(.35rem + env(safe-area-inset-bottom));
+  border-top:1px solid #e9ecef;
+}
+.bottom-nav .nav-link{
+  display:flex;flex-direction:column;align-items:center;gap:.15rem;
+  color:#64748b;font-size:.65rem;text-decoration:none;
+  padding:.35rem .5rem;border-radius:.5rem;
+  transition:color .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.bottom-nav .nav-link i{font-size:1.35rem;line-height:1}
+.bottom-nav .nav-link:hover,.bottom-nav .nav-link.active{color:var(--app-accent)}
+.bottom-nav .nav-link.active{font-weight:600}
+
+/* ---- GENERAL ---- */
+.card{border-radius:1rem}
+.form-card{max-width:900px}
+.metric-card{box-shadow:0 8px 24px rgba(28,39,69,.07);transition:transform .2s}
+.metric-card:hover{transform:translateY(-3px)}
+.metric-icon{width:3.25rem;height:3.25rem;border-radius:.85rem;display:grid;place-items:center;font-size:1.4rem}
+.text-bg-purple{background:#6f42c1!important}
+.form-control,.form-select{min-height:2.7rem;border-radius:.6rem;border-color:#dfe4ee}
+.form-control:focus,.form-select:focus{border-color:#8194ef;box-shadow:0 0 0 .2rem #405cf51f}
+.btn{border-radius:.6rem}
+.table>thead{color:#64708a;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+.selected-client{background:#edf1ff;border-radius:.75rem;padding:1rem}
+.payment-summary{background:#f7f9ff;border-radius:.75rem;padding:1rem}
+
+/* ---- WIZARD MOBILE (cobro formal) ---- */
+.mobile-step{display:none}
+.mobile-step.active{display:block}
+.invoice-card{
+  border:2px solid #e9ecef;border-radius:.85rem;
+  padding:1rem;margin-bottom:.75rem;
+  transition:border-color .15s,box-shadow .15s;
+  cursor:pointer;
+}
+.invoice-card.selected{border-color:var(--app-accent);box-shadow:0 0 0 3px rgba(64,92,245,.15)}
+.invoice-card .form-check-input{width:1.3em;height:1.3em;cursor:pointer}
+.invoice-card .invoice-meta{font-size:.82rem;color:#64748b}
+
+/* ---- COBRO INFORMAL MOBILE ---- */
+.ci-form .form-label{font-weight:600;font-size:.88rem}
+.ci-form .form-control,.ci-form .form-select{min-height:3rem;font-size:1rem}
+.ci-form textarea.form-control{min-height:auto}
+
+/* ---- CARDS EN TABLAS (mobile) ---- */
+.table-mobile-cards{display:none}
+
+/* ---- QUICK ACCESS (Dashboard) ---- */
+.quick-access-scroll{display:flex;gap:.75rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;padding-bottom:.5rem;scrollbar-width:none}
+.quick-access-scroll::-webkit-scrollbar{display:none}
+.quick-access-item{
+  display:flex;flex-direction:column;align-items:center;gap:.4rem;
+  min-width:5rem;padding:.75rem .5rem;border-radius:1rem;
+  background:#fff;border:1px solid #e9ecef;
+  text-decoration:none;color:#243047;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+  scroll-snap-align:start;
+  transition:transform .15s,box-shadow .15s;
+  flex-shrink:0;
+}
+.quick-access-item:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.08);color:#243047}
+.quick-access-icon{width:2.8rem;height:2.8rem;border-radius:.75rem;display:grid;place-items:center;color:#fff;font-size:1.2rem}
+.quick-access-label{font-size:.72rem;font-weight:600;text-align:center;white-space:nowrap}
+
+/* ---- REGISTRAR FACTURA ---- */
+.rf-client-selected{background:#edf1ff;border-radius:.75rem;padding:1rem}
+.rf-client-empty{border:2px dashed #d0d7e8;border-radius:.75rem;padding:1.5rem;text-align:center;color:#64748b}
+#client-search-results{max-height:240px;overflow-y:auto}
+
+/* ======================================================
+   MOBILE breakpoint
+   ====================================================== */
+@media(max-width:767px){
+  /* quick access horizontal scroll */
+  .quick-access-scroll{gap:.6rem;padding-bottom:.25rem}
+  .quick-access-item{min-width:4.5rem;padding:.6rem .4rem}
+  .quick-access-icon{width:2.5rem;height:2.5rem;font-size:1.1rem}
+  .quick-access-label{font-size:.68rem}
+
+  /* spacing for bottom nav */
+  .main-content{padding-bottom:5rem!important;padding-top:1rem!important}
+
+  /* headings smaller */
+  .page-heading h1,.d-flex h1.h3{font-size:1.15rem}
+
+  /* full-width buttons */
+  .btn-lg{width:100%}
+  .gap-2>.btn,.d-flex.gap-2{flex-wrap:wrap}
+  .d-flex.gap-2>.btn{flex:1 1 45%;min-width:0}
+
+  /* forms single column */
+  .row.g-3>[class*="col-"]{width:100%;flex:0 0 100%;max-width:100%}
+
+  /* tables -> cards */
+  .table-responsive{display:none}
+  .table-mobile-cards{display:flex;flex-direction:column;gap:.75rem}
+  .table-mobile-cards .card{border:1px solid #e9ecef;border-radius:.85rem;padding:1rem}
+  .table-mobile-cards .card-header{background:none;border-bottom:none;padding:0 0 .5rem;font-weight:600}
+  .table-mobile-cards .card-body{padding:0}
+
+  /* invoice wizard cards */
+  .mobile-invoice-list .invoice-card{margin-bottom:.6rem}
+
+  /* cobro informal */
+  .ci-form .row.g-3>[class*="col-md-"]{width:100%;flex:0 0 100%;max-width:100%}
+  .ci-form .card-footer .btn{width:100%}
+
+  /* detail pages */
+  .d-flex.flex-wrap.justify-content-between{flex-direction:column;gap:.75rem}
+  .d-flex.gap-2{width:100%}
+  .d-flex.gap-2>.btn{flex:1}
+
+  /* search forms */
+  .row.g-2>[class*="col-md-"],.row.g-2>[class*="col-sm-"]{width:100%;flex:0 0 100%;max-width:100%}
+  .row.g-2 .col-auto{width:100%}
+  .row.g-2 .col-auto .btn{width:100%}
+}
+
+/* larger phones / small tablets */
+@media(min-width:576px) and (max-width:767px){
+  .bottom-nav .nav-link{font-size:.7rem;padding:.4rem .6rem}
+  .bottom-nav .nav-link i{font-size:1.45rem}
+}
+
+/* ---- ARQUEO POS LAYOUT ---- */
+.arqueo-layout .card{margin-bottom:.35rem}
+.arqueo-layout .card-body{padding:.4rem .6rem}
+.arqueo-layout .card-header{padding:.25rem .6rem}
+.arqueo-layout .form-label{margin-bottom:.1rem;font-size:.75rem}
+.arqueo-layout .form-control-sm,.arqueo-layout .form-select-sm{font-size:.8rem;padding:.2rem .4rem}
+.arqueo-layout .table td,.arqueo-layout .table th{padding:.25rem .35rem;font-size:.8rem}
+@media(min-width:992px){
+  .arqueo-layout .col-lg-6{max-width:50%;flex:0 0 50%}
+}

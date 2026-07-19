@@ -1,0 +1,38 @@
+{% extends 'base.html' %}{% block title %}Usuarios · ARQUEOB{% endblock %}{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <div><h1 class="h3 mb-1">Usuarios</h1><p class="text-secondary mb-0">Administración de usuarios del sistema.</p></div>
+  <a class="btn btn-primary" href="{{ url_for('config_admin.nuevo_usuario') }}"><i class="bi bi-plus"></i> Nuevo usuario</a>
+</div>
+<div class="card border-0 shadow-sm"><div class="card-body p-3 p-lg-4">
+  <form class="row g-2 mb-3">
+    <div class="col-sm-8 col-md-6"><input class="form-control form-control-lg" name="q" value="{{ q }}" placeholder="Buscar por nombre, usuario o correo"></div>
+    <div class="col-auto"><button class="btn btn-outline-primary btn-lg"><i class="bi bi-search"></i> Buscar</button></div>
+  </form>
+  <div class="table-responsive">
+    <table class="table align-middle table-hover">
+      <thead><tr><th>Usuario</th><th>Nombre completo</th><th>Correo</th><th>Estado</th><th>Rol</th><th>Último acceso</th><th class="text-center">Acciones</th></tr></thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr>
+          <td><strong>{{ u.username }}</strong></td>
+          <td>{{ u.nombre_completo }}</td>
+          <td>{{ u.email or '—' }}</td>
+          <td><span class="badge text-bg-{{ 'success' if u.is_active else 'secondary' }}">{{ 'Activo' if u.is_active else 'Inactivo' }}</span></td>
+          <td><span class="badge text-bg-{{ 'primary' if u.is_admin else 'info' }}">{{ 'Admin' if u.is_admin else 'Usuario' }}</span></td>
+          <td>{{ u.last_login.strftime('%d/%m/%Y %H:%M') if u.last_login else 'Nunca' }}</td>
+          <td class="text-center text-nowrap">
+            <a href="{{ url_for('config_admin.editar_usuario', uid=u.id) }}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{{ url_for('config_admin.toggle_usuario', uid=u.id) }}" class="d-inline"><button class="btn btn-sm btn-outline-{{ 'warning' if u.is_active else 'success' }}" title="{{ 'Desactivar' if u.is_active else 'Activar' }}"><i class="bi bi-{{ 'pause-circle' if u.is_active else 'play-circle' }}"></i></button></form>
+            {% if u.id != current_user.id %}
+            <form method="post" action="{{ url_for('config_admin.eliminar_usuario', uid=u.id) }}" class="d-inline" data-confirm="¿Eliminar el usuario '{{ u.username }}'?"><button class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button></form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-secondary py-5">No hay usuarios registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div></div>
+{% endblock %}

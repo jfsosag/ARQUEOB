@@ -1,0 +1,14 @@
+{% extends 'base.html' %}{% block title %}Mi cuenta · ARQUEOB{% endblock %}{% block content %}
+<div class="mb-4"><h1 class="h3">Mi cuenta</h1><p class="text-secondary mb-0">Cambiar contraseña.</p></div>
+<div class="row"><div class="col-lg-6">
+  <section class="card border-0 shadow-sm"><div class="card-body p-3 p-lg-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} py-2">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
+    <form method="post">
+      <div class="mb-3"><label class="form-label fw-semibold">Contraseña actual</label><input class="form-control" name="password_actual" type="password" required></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Nueva contraseña</label><input class="form-control" name="password_nueva" type="password" required minlength="6"></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Confirmar contraseña</label><input class="form-control" name="password_confirmar" type="password" required minlength="6"></div>
+      <button class="btn btn-primary"><i class="bi bi-check-circle"></i> Actualizar contraseña</button>
+    </form>
+  </div></section>
+</div></div>
+{% endblock %}

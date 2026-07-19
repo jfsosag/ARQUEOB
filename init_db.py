@@ -1,36 +1,19 @@
-import sqlite3, json
-conn = sqlite3.connect('arqueo.db')
-c = conn.cursor()
-c.execute('''
-CREATE TABLE IF NOT EXISTS arqueos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT,
-    cashier TEXT,
-    shift TEXT,
-    starting_fund REAL,
-    counts_json TEXT,
-    noncash_json TEXT,
-    noncash_list_json TEXT,
-    invoices_json TEXT,
-    totals_json TEXT,
-    created_at TEXT
-)
-''')
+"""Guía de inicialización para el esquema PostgreSQL.
 
-c.execute('''
-CREATE TABLE IF NOT EXISTS conduces (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    fecha TEXT,
-    cajero TEXT,
-    cliente TEXT,
-    direccion TEXT,
-    factura TEXT,
-    bultos INTEGER,
-    mercancia_json TEXT,
-    total REAL,
-    created_at TEXT
-)
-''')
+No crea tablas directamente: Flask-Migrate/Alembic mantiene el historial de
+migraciones. Configure DATABASE_URL en .env antes de ejecutarlo.
+"""
 
-conn.commit()
-print("Base de datos 'arqueo.db' inicializada con tablas 'arqueos' y 'conduces'.")
+import os
+import sys
+from dotenv import load_dotenv
+
+load_dotenv()
+
+if not os.getenv("DATABASE_URL"):
+    sys.exit("DATABASE_URL no está configurada. Copie .env.example a .env.")
+
+print("Ejecute los siguientes comandos una única vez:")
+print("  flask --app wsgi db init")
+print("  flask --app wsgi db migrate -m 'esquema inicial'")
+print("  flask --app wsgi db upgrade")

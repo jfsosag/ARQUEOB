@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}{{ cliente.nombre }} · ARQUEOB{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+  <div>
+    <a class="small text-decoration-none" href="{{ url_for('clientes.listado') }}"><i class="bi bi-arrow-left"></i> Clientes</a>
+    <h1 class="h3 mt-2 mb-0">{{ cliente.nombre }}</h1>
+    <p class="text-secondary mb-0">{{ cliente.telefono }} · {{ cliente.rnc_cedula or 'Sin RNC/cédula' }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{{ url_for('clientes.editar', cliente_id=cliente.id) }}"><i class="bi bi-pencil"></i> Editar</a>
+    <a class="btn btn-primary" href="{{ url_for('cobros.cobrar', cliente_id=cliente.id) }}"><i class="bi bi-cash-coin"></i> Registrar cobro</a>
+  </div>
+</div>
+
+{# ---- RESUMEN ---- #}
+<div class="row g-3 mb-4">
+  {% set total_facturado = facturas|map(attribute='monto')|sum %}
+  {% set total_pagado = facturas|map(attribute='monto')|sum - facturas|map(attribute='saldo')|sum %}
+  {% set total_pendiente = facturas|map(attribute='saldo')|sum %}
+  <div class="col-sm-4"><div class="card border-0 shadow-sm"><div class="card-body text-center"><div class="text-secondary small">Total facturado</div><div class="fs-5 fw-bold">{{ total_facturado|currency }}</div></div></div></div>
+  <div class="col-sm-4"><div class="card border-0 shadow-sm"><div class="card-body text-center"><div class="text-secondary small">Total pagado</div><div class="fs-5 fw-bold text-success">{{ total_pagado|currency }}</div></div></div></div>
+  <div class="col-sm-4"><div class="card border-0 shadow-sm"><div class="card-body text-center"><div class="text-secondary small">Pendiente</div><div class="fs-5 fw-bold text-danger">{{ total_pendiente|currency }}</div></div></div></div>
+</div>
+
+<div class="row g-3">
+  {# ---- TABLA DE FACTURAS ---- #}
+  <div class="col-lg-8">
+    <section class="card border-0 shadow-sm h-100">
+      <div class="card-body p-3 p-lg-4">
+        <h2 class="h5 mb-3"><i class="bi bi-receipt me-1"></i> Facturas</h2>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr><th>No.</th><th>Fecha</th><th>Concepto</th><th class="text-end">Total</th><th class="text-end">Pagado</th><th class="text-end">Pendiente</th><th>Estado</th><th class="text-center">Acciones</th></tr>
+            </thead>
+            <tbody>
+              {% for f in facturas %}
+              {% set pagado = f.monto - f.saldo %}
+              <tr>
+                <td><strong>{{ f.numero }}</strong></td>
+                <td>{{ f.fecha.strftime('%d/%m/%Y') }}</td>
+                <td>{{ f.concepto }}</td>
+                <td class="text-end">{{ f.monto|currency }}</td>
+                <td class="text-end text-success">{{ pagado|currency }}</td>
+                <td class="text-end fw-bold">{{ f.saldo|currency }}</td>
+                <td><span class="badge text-bg-{{ 'success' if f.estado.value == 'Pagada' else 'warning' if f.estado.value == 'Parcial' else 'secondary' }}">{{ f.estado.value }}</span></td>
+                <td class="text-center text-nowrap">
+                  <a href="{{ url_for('clientes.editar_factura', cliente_id=cliente.id, factura_id=f.id) }}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
+                  {% if f.estado.value != 'Pagada' %}
+                  {% set tiene_pagos = false %}
+                  {% for d in f.detalles_pago %}{% if d.monto_aplicado > 0 %}{% set tiene_pagos = true %}{% endif %}{% endfor %}
+                  {% if not tiene_pagos %}
+                  <form method="post" action="{{ url_for('clientes.eliminar_factura', cliente_id=cliente.id, factura_id=f.id) }}" class="d-inline" data-confirm="¿Eliminar esta factura? Esta acción no se puede deshacer."><button class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button></form>
+                  {% endif %}
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="8" class="text-center text-secondary py-4">Aún no hay facturas registradas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  {# ---- FORMULARIO NUEVA FACTURA ---- #}
+  <div class="col-lg-4">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-3 p-lg-4">
+        <h2 class="h5 mb-3"><i class="bi bi-plus-circle me-1"></i> Registrar Factura</h2>
+        <p class="small text-secondary mb-3">Puede registrar varias facturas al mismo tiempo.</p>
+        <form method="post" action="{{ url_for('clientes.crear_facturas', cliente_id=cliente.id) }}" id="invoice-form">
+          <div id="invoice-lines">
+            <div class="invoice-line border rounded p-2 mb-2">
+              <input class="form-control mb-2" name="numero[]" placeholder="Número de factura" required>
+              <input class="form-control mb-2" name="concepto[]" placeholder="Concepto" required>
+              <div class="row g-2">
+                <div class="col-6"><input class="form-control" name="monto[]" type="number" min="0.01" step="0.01" placeholder="Monto" required></div>
+                <div class="col-6"><input class="form-control" name="fecha[]" type="date" value="{{ today }}" required></div>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-light w-100 mb-2" data-add-invoice><i class="bi bi-plus"></i> Otra factura</button>
+          <button class="btn btn-primary btn-lg w-100"><i class="bi bi-check-lg"></i> Guardar facturas</button>
+        </form>
+      </div>
+    </section>
+
+    <form method="post" action="{{ url_for('clientes.eliminar', cliente_id=cliente.id) }}" class="mt-3" data-confirm="¿Eliminar este cliente y todas sus facturas? Esta acción no se puede deshacer.">
+      <button class="btn btn-outline-danger w-100"><i class="bi bi-trash"></i> Eliminar cliente</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

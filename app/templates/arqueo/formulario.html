@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% block title %}Arqueo de caja · ARQUEOB{% endblock %}
+{% block content %}
+
+{# ── Top bar: buttons ───────────────────────────────────────────── #}
+
+<form method="post" id="arqueo-form">
+<div class="row g-2 arqueo-layout">
+
+  {# ════════════════════════════════════════════════════════════════
+     COLUMNA IZQUIERDA
+     ════════════════════════════════════════════════════════════════ #}
+  <div class="col-lg-6">
+
+    {# ── Info del cierre (compacta) ───────────────────────────── #}
+    <section class="card border-0 shadow-sm mb-2">
+      <div class="card-body py-2 px-3">
+        <div class="row g-1 align-items-end">
+          <div class="col" style="max-width:180px"><label class="form-label small mb-0">Cajero/a *</label><input required name="cajero" class="form-control form-control-sm" id="arq-cajero"></div>
+          <div class="col-auto"><label class="form-label small mb-0">Turno *</label><select name="turno" class="form-select form-select-sm" id="arq-turno" style="min-width:120px"><option>12:00 pm</option><option>3:00 pm</option><option>5:30 pm</option></select></div>
+          <div class="col-auto"><label class="form-label small mb-0">Fecha</label><input type="date" name="fecha" class="form-control form-control-sm" value="{{ hoy }}" id="arq-fecha"></div>
+          <div class="col-auto"><label class="form-label small mb-0">Fondo</label><input type="number" step="0.01" min="0" name="fondo_inicial" class="form-control form-control-sm" value="0" id="arq-fondo" style="width:90px"></div>
+        </div>
+      </div>
+    </section>
+
+    {# ── Desglose de efectivo ─────────────────────────────────── #}
+    <section class="card border-0 shadow-sm mb-2">
+      <div class="card-header bg-white py-1 px-3 border-0"><strong class="small">Efectivo</strong></div>
+      <div class="card-body py-2 px-3">
+        <div class="row g-1">
+          {% for d in denominaciones %}
+          <div class="col-4 col-sm-3 col-xl-2">
+            <label class="form-label small mb-0 text-nowrap">RD$ {{ '{:,}'.format(d) }}</label>
+            <input type="number" min="0" name="denom_{{ d }}" class="form-control form-control-sm denom-input" value="0" data-denom="{{ d }}">
+          </div>
+          {% endfor %}
+        </div>
+        <div class="d-flex justify-content-between mt-2 pt-1 border-top">
+          <span class="small fw-semibold">Total efectivo</span>
+          <span class="fw-bold" id="total-efectivo">RD$ 0.00</span>
+        </div>
+      </div>
+    </section>
+
+    {# ── No efectivo: agregar registro ────────────────────────── #}
+    <section class="card border-0 shadow-sm mb-2">
+      <div class="card-header bg-white py-1 px-3 border-0"><strong class="small">Formas de pago no efectivo</strong></div>
+      <div class="card-body py-2 px-3">
+        <div class="row g-1 align-items-end">
+          <div class="col"><select class="form-select form-select-sm" id="ne-tipo"><option>Cheques</option><option>Tarjetas</option><option>Transferencias</option><option>Vales</option><option>Otros</option></select></div>
+          <div class="col"><input class="form-control form-control-sm" id="ne-concepto" placeholder="Concepto"></div>
+          <div class="col"><input class="form-control form-control-sm" id="ne-monto" type="number" step="0.01" min="0" placeholder="Monto"></div>
+          <div class="col-auto"><button type="button" class="btn btn-sm btn-primary" id="btn-add-ne"><i class="bi bi-plus"></i> Agregar</button></div>
+        </div>
+        <div class="table-responsive mt-2" id="ne-table-wrap" style="display:none">
+          <table class="table table-sm table-borderless mb-0 align-middle">
+            <thead class="text-secondary small"><tr><th>Tipo</th><th>Concepto</th class="text-end"><th>Monto</th><th></th></tr></thead>
+            <tbody id="ne-tbody"></tbody>
+            <tfoot><tr class="fw-bold"><td colspan="2">Total no efectivo</td><td class="text-end" id="total-ne">RD$ 0.00</td><td></td></tr></tfoot>
+          </table>
+        </div>
+        {# Hidden inputs for form submission #}
+        <div id="ne-hidden"></div>
+      </div>
+    </section>
+  </div>
+
+  {# ════════════════════════════════════════════════════════════════
+     COLUMNA DERECHA
+     ════════════════════════════════════════════════════════════════ #}
+  <div class="col-lg-6">
+
+    {# ── Resumen ──────────────────────────────────────────────── #}
+    <section class="card border-0 shadow-sm mb-2">
+      <div class="card-body py-2 px-3">
+        <div class="row g-1 text-center">
+          <div class="col-4 col-md-2"><div class="text-secondary" style="font-size:.7rem">Efectivo</div><div class="fw-bold small" id="r-efectivo">0</div></div>
+          <div class="col-4 col-md-2"><div class="text-secondary" style="font-size:.7rem">Tarjetas</div><div class="fw-bold small" id="r-tarjetas">0</div></div>
+          <div class="col-4 col-md-2"><div class="text-secondary" style="font-size:.7rem">Transf.</div><div class="fw-bold small" id="r-transferencias">0</div></div>
+          <div class="col-4 col-md-2"><div class="text-secondary" style="font-size:.7rem">Cheques</div><div class="fw-bold small" id="r-cheques">0</div></div>
+          <div class="col-4 col-md-2"><div class="text-secondary" style="font-size:.7rem">Vales</div><div class="fw-bold small" id="r-vales">0</div></div>
+          <div class="col-4 col-md-2"><div class="text-secondary" style="font-size:.7rem">Otros</div><div class="fw-bold small" id="r-otros">0</div></div>
+        </div>
+        <hr class="my-1">
+        <div class="row g-1 text-center">
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">Vendido</div><div class="fw-bold small" id="r-vendido">0</div></div>
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">Sin Comp.</div><div class="fw-bold small" id="r-sc">0</div></div>
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">Con Comp.</div><div class="fw-bold small" id="r-cc">0</div></div>
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">R. Ingreso</div><div class="fw-bold small" id="r-ri">0</div></div>
+        </div>
+        <hr class="my-1">
+        <div class="row g-1 text-center">
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">Contado</div><div class="fw-bold small" id="r-contado">0</div></div>
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">Crédito</div><div class="fw-bold small" id="r-credito">0</div></div>
+        </div>
+        <hr class="my-1">
+        <div class="row g-1 text-center">
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">F. Crédito</div><div class="fw-bold small" id="r-cant-credito">0</div></div>
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">Vales</div><div class="fw-bold small" id="r-cant-vales">0</div></div>
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">Vales</div><div class="fw-bold small" id="r-cant-vales">0</div></div>
+          <div class="col-3"><div class="text-secondary" style="font-size:.7rem">No efectivo</div><div class="fw-bold small" id="r-cant-ne">0</div></div>
+        </div>
+      </div>
+    </section>
+
+    {# ── Facturas al contado (3 bloques fijos) ───────────────── #}
+    <section class="card border-0 shadow-sm mb-2">
+      <div class="card-header bg-white py-1 px-3 border-0"><strong class="small">Facturas al contado</strong></div>
+      <div class="card-body py-2 px-3">
+        {# Sin Comprobante #}
+        <div class="mb-2">
+          <div class="fw-semibold small text-secondary mb-1">Sin Comprobante</div>
+          <div class="row g-1 align-items-end">
+            <div class="col"><label class="form-label small mb-0">Monto Total</label><input class="form-control form-control-sm ct-monto" data-tipo="sc" type="number" step="0.01" min="0" value="0"></div>
+            <div class="col"><label class="form-label small mb-0">Desde</label><input class="form-control form-control-sm ct-desde" data-tipo="sc" placeholder="SC0000000"></div>
+            <div class="col"><label class="form-label small mb-0">Hasta</label><input class="form-control form-control-sm ct-hasta" data-tipo="sc" placeholder="SC0000000"></div>
+          </div>
+        </div>
+        {# Con Comprobante #}
+        <div class="mb-2">
+          <div class="fw-semibold small text-secondary mb-1">Con Comprobante</div>
+          <div class="row g-1 align-items-end">
+            <div class="col"><label class="form-label small mb-0">Monto Total</label><input class="form-control form-control-sm ct-monto" data-tipo="cc" type="number" step="0.01" min="0" value="0"></div>
+            <div class="col"><label class="form-label small mb-0">Desde</label><input class="form-control form-control-sm ct-desde" data-tipo="cc" placeholder="B0200000000"></div>
+            <div class="col"><label class="form-label small mb-0">Hasta</label><input class="form-control form-control-sm ct-hasta" data-tipo="cc" placeholder="B0200000000"></div>
+          </div>
+        </div>
+        {# Recibos de Ingreso #}
+        <div>
+          <div class="fw-semibold small text-secondary mb-1">Recibos de Ingreso</div>
+          <div class="row g-1 align-items-end">
+            <div class="col"><label class="form-label small mb-0">Monto Total</label><input class="form-control form-control-sm ct-monto" data-tipo="ri" type="number" step="0.01" min="0" value="0"></div>
+            <div class="col"><label class="form-label small mb-0">Desde</label><input class="form-control form-control-sm ct-desde" data-tipo="ri" placeholder="RI0000000"></div>
+            <div class="col"><label class="form-label small mb-0">Hasta</label><input class="form-control form-control-sm ct-hasta" data-tipo="ri" placeholder="RI0000000"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ── Facturas a crédito ───────────────────────────────────── #}
+    <section class="card border-0 shadow-sm mb-2">
+      <div class="card-header bg-white py-1 px-3 border-0"><strong class="small">Facturas a crédito</strong></div>
+      <div class="card-body py-2 px-3">
+        <div class="row g-1 align-items-end">
+          <div class="col"><input class="form-control form-control-sm" id="cr-desde" placeholder="Desde"></div>
+          <div class="col"><input class="form-control form-control-sm" id="cr-hasta" placeholder="Hasta"></div>
+          <div class="col"><input class="form-control form-control-sm" id="cr-cantidad" type="number" min="0" placeholder="Cant."></div>
+          <div class="col"><input class="form-control form-control-sm" id="cr-monto" type="number" step="0.01" min="0" placeholder="Total"></div>
+          <div class="col-auto"><button type="button" class="btn btn-sm btn-primary" id="btn-add-cr"><i class="bi bi-plus"></i></button></div>
+        </div>
+        <div class="table-responsive mt-2" id="cr-table-wrap" style="display:none">
+          <table class="table table-sm table-borderless mb-0 align-middle">
+            <thead class="text-secondary small"><tr><th>Desde</th><th>Hasta</th><th class="text-end">Cant.</th><th class="text-end">Total</th><th></th></tr></thead>
+            <tbody id="cr-tbody"></tbody>
+            <tfoot><tr class="fw-bold"><td colspan="3">Total crédito</td><td class="text-end" id="total-cr">RD$ 0.00</td><td></td></tr></tfoot>
+          </table>
+        </div>
+        <div id="cr-hidden"></div>
+      </div>
+    </section>
+
+    {# ── Submit ────────────────────────────────────────────────── #}
+    <button type="submit" class="btn btn-primary btn-lg w-100 py-2" id="btn-guardar">
+      <i class="bi bi-check-circle me-1"></i> Guardar Arqueo
+    </button>
+  </div>
+</div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+  const fmt = n => `RD$ ${n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+  const fmtShort = n => n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const val = s => parseFloat($(s)?.value) || 0;
+  const isReadOnly = false;
+  let neIdx = 0, ctIdx = 0, crIdx = 0;
+
+  /* ── Efectivo denominaciones ───────────────────────────────── */
+  function calcEfectivo() {
+    let total = 0;
+    $$('.denom-input').forEach(inp => { total += parseFloat(inp.dataset.denom) * (parseFloat(inp.value) || 0); });
+    $('#total-efectivo').textContent = fmt(total);
+    updateResumen();
+  }
+  $$('.denom-input').forEach(inp => inp.addEventListener('input', calcEfectivo));
+
+  /* ── No efectivo ───────────────────────────────────────────── */
+  const neData = [];
+  $('#btn-add-ne')?.addEventListener('click', () => {
+    const tipo = $('#ne-tipo').value;
+    const concepto = $('#ne-concepto').value.trim();
+    const monto = parseFloat($('#ne-monto').value);
+    if (!monto || monto <= 0) return;
+    neData.push({tipo, concepto, monto});
+    renderNE();
+    $('#ne-concepto').value = '';
+    $('#ne-monto').value = '';
+  });
+
+  function renderNE() {
+    const tbody = $('#ne-tbody');
+    const wrap = $('#ne-table-wrap');
+    const hidden = $('#ne-hidden');
+    if (!neData.length) { wrap.style.display = 'none'; hidden.innerHTML = ''; updateResumen(); return; }
+    wrap.style.display = '';
+    tbody.innerHTML = neData.map((r, i) => `<tr><td><span class="badge text-bg-secondary">${r.tipo}</span></td><td class="small">${r.concepto || '—'}</td><td class="text-end">${fmt(r.monto)}</td><td><button type="button" class="btn btn-sm btn-outline-danger py-0" data-rm-ne="${i}"><i class="bi bi-x"></i></button></td></tr>`).join('');
+    hidden.innerHTML = neData.map((r, i) => `<input type="hidden" name="tipo_no_efectivo[]" value="${r.tipo}"><input type="hidden" name="monto_no_efectivo[]" value="${r.monto}">`).join('');
+    tbody.querySelectorAll('[data-rm-ne]').forEach(btn => btn.addEventListener('click', () => { neData.splice(parseInt(btn.dataset.rmNe), 1); renderNE(); }));
+    updateResumen();
+  }
+
+  /* ── Facturas al contado (3 bloques fijos) ──────────────────── */
+  $$('.ct-monto').forEach(inp => inp.addEventListener('input', updateResumen));
+
+  /* ── Facturas a crédito ────────────────────────────────────── */
+  const crData = [];
+  $('#btn-add-cr')?.addEventListener('click', () => {
+    const desde = $('#cr-desde').value.trim();
+    const hasta = $('#cr-hasta').value.trim();
+    const cantidad = parseInt($('#cr-cantidad').value) || 0;
+    const monto = parseFloat($('#cr-monto').value);
+    if (!monto || monto <= 0) return;
+    crData.push({desde, hasta, cantidad, monto});
+    renderCR();
+    $('#cr-desde').value = ''; $('#cr-hasta').value = ''; $('#cr-cantidad').value = ''; $('#cr-monto').value = '';
+  });
+
+  function renderCR() {
+    const tbody = $('#cr-tbody');
+    const wrap = $('#cr-table-wrap');
+    const hidden = $('#cr-hidden');
+    if (!crData.length) { wrap.style.display = 'none'; hidden.innerHTML = ''; updateResumen(); return; }
+    wrap.style.display = '';
+    tbody.innerHTML = crData.map((r, i) => `<tr><td class="small">${r.desde || '—'}</td><td class="small">${r.hasta || '—'}</td><td class="text-end">${r.cantidad}</td><td class="text-end">${fmt(r.monto)}</td><td><button type="button" class="btn btn-sm btn-outline-danger py-0" data-rm-cr="${i}"><i class="bi bi-x"></i></button></td></tr>`).join('');
+    hidden.innerHTML = crData.map((r, i) => `<input type="hidden" name="credito_desde[]" value="${r.desde}"><input type="hidden" name="credito_hasta[]" value="${r.hasta}"><input type="hidden" name="credito_cantidad[]" value="${r.cantidad}"><input type="hidden" name="credito_monto[]" value="${r.monto}">`).join('');
+    tbody.querySelectorAll('[data-rm-cr]').forEach(btn => btn.addEventListener('click', () => { crData.splice(parseInt(btn.dataset.rmCr), 1); renderCR(); }));
+    updateResumen();
+  }
+
+  /* ── Resumen en tiempo real ────────────────────────────────── */
+  function updateResumen() {
+    let efectivo = 0;
+    $$('.denom-input').forEach(inp => { efectivo += parseFloat(inp.dataset.denom) * (parseFloat(inp.value) || 0); });
+    let tarjetas = 0, transferencias = 0, cheques = 0, otros = 0;
+    neData.forEach(r => {
+      if (r.tipo === 'Tarjetas') tarjetas += r.monto;
+      else if (r.tipo === 'Transferencias') transferencias += r.monto;
+      else if (r.tipo === 'Cheques') cheques += r.monto;
+      else otros += r.monto;
+    });
+    const sc = parseFloat($('.ct-monto[data-tipo="sc"]')?.value) || 0;
+    const cc = parseFloat($('.ct-monto[data-tipo="cc"]')?.value) || 0;
+    const ri = parseFloat($('.ct-monto[data-tipo="ri"]')?.value) || 0;
+    const contadoTotal = sc + cc + ri;
+    const creditoTotal = crData.reduce((s, r) => s + r.monto, 0);
+    const vendido = contadoTotal + creditoTotal;
+    const cantCredito = crData.reduce((s, r) => s + r.cantidad, 0);
+
+    $('#r-efectivo').textContent = fmtShort(efectivo);
+    $('#r-tarjetas').textContent = fmtShort(tarjetas);
+    $('#r-transferencias').textContent = fmtShort(transferencias);
+    $('#r-cheques').textContent = fmtShort(cheques);
+    $('#r-vales').textContent = fmtShort(otros);
+    $('#r-otros').textContent = fmtShort(otros);
+    $('#r-vendido').textContent = fmtShort(vendido);
+    $('#r-sc').textContent = fmtShort(sc);
+    $('#r-cc').textContent = fmtShort(cc);
+    $('#r-ri').textContent = fmtShort(ri);
+    $('#r-contado').textContent = fmtShort(contadoTotal);
+    $('#r-credito').textContent = fmtShort(creditoTotal);
+    $('#r-cant-credito').textContent = cantCredito;
+    $('#r-cant-ne').textContent = neData.length;
+  }
+
+  calcEfectivo();
+})();
+</script>
+{% endblock %}
