@@ -3,10 +3,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+_db_url = os.getenv("DATABASE_URL", "")
+if _db_url.startswith("postgresql://"):
+    _db_url = _db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-in-production")
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "")
+    SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     COMPANY_NAME = os.getenv("COMPANY_NAME", "CLÍNICA DE FRENOS HÉCTOR LÓPEZ SRL")
     COMPANY_PHONE = os.getenv("COMPANY_PHONE", "809-575-4401")

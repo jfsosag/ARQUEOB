@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: arqueob
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.4"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: arqueob-db
+          property: connectionString
+      - key: COMPANY_NAME
+        value: "CLÍNICA DE FRENOS HÉCTOR LÓPEZ SRL"
+      - key: COMPANY_PHONE
+        value: "809-575-4401"
+      - key: COMPANY_RNC
+        value: "1-33-08894-2"
+      - key: COMPANY_ADDRESS
+        value: "CALLE 2 NO.5 LOS CIRUELITOS, SANTIAGO R.D"
+
+databases:
+  - name: arqueob-db
+    plan: free
+    databaseName: arqueob
+    user: arqueob
