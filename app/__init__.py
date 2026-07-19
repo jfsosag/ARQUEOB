@@ -1,9 +1,15 @@
-from flask import Flask, abort, redirect, request, url_for
+import logging
+import traceback
+
+from flask import Flask, abort, redirect, request, url_for, render_template
 from dotenv import load_dotenv
 from datetime import date
 
 from config import DevelopmentConfig
 from app.extensions import db, migrate, login_manager
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @login_manager.user_loader
@@ -79,5 +85,23 @@ def create_app(config_object=DevelopmentConfig):
             "today": date.today().isoformat(),
             "modulos_usuario": modulos_usuario,
         }
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return render_template("errores/404.html"), 404
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("errores/403.html"), 403
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        logger.error("500 error: %s", traceback.format_exc())
+        return render_template("errores/500.html"), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        logger.error("Unhandled exception: %s", traceback.format_exc())
+        return render_template("errores/500.html"), 500
 
     return app
