@@ -10,4 +10,16 @@ else:
 
 with app.app_context():
     from app.extensions import db
+    from app.models.usuario import Usuario
     db.create_all()
+    if not db.session.scalar(db.select(Usuario).where(Usuario.username == "admin")):
+        admin = Usuario(
+            nombre_completo="Administrador",
+            username="admin",
+            email="admin@arqueob.local",
+            is_active=True,
+            is_admin=True,
+        )
+        admin.set_password("admin123")
+        db.session.add(admin)
+        db.session.commit()
