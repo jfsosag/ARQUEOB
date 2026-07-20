@@ -8,7 +8,7 @@ def recibo_pdf(pago, empresa):
     """Genera un recibo profesional de dos copias en formato térmico."""
     ancho, alto = 80 * mm, 180 * mm
     buffer = io.BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=(ancho, alto))
+    pdf = canvas.Canvas(buffer, pagesize=(ancho, alto), pageCompression=1)
 
     def copia(etiqueta):
         y, margen = alto - 10 * mm, 7 * mm
@@ -81,7 +81,7 @@ def recibo_pdf(pago, empresa):
 
 def conduce_pdf(conduce, empresa):
     buffer = io.BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=A4)
+    pdf = canvas.Canvas(buffer, pagesize=A4, pageCompression=1)
     ancho, alto = A4
 
     def cuadro(superior, etiqueta):

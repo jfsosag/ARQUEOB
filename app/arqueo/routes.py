@@ -200,7 +200,7 @@ def reporte(arqueo_id):
     vales = arqueo.vales if hasattr(arqueo, 'vales') and arqueo.vales else []
 
     buffer = io.BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=A4)
+    pdf = canvas.Canvas(buffer, pagesize=A4, pageCompression=1)
     ancho, alto = A4
     ml, mr = 45, ancho - 45
     y = alto - 35

@@ -103,7 +103,7 @@ def factura_pdf(factura_id):
     factura = db.get_or_404(Factura, factura_id)
     empresa = _empresa()
     buffer = io.BytesIO()
-    pdf = pdf_canvas.Canvas(buffer, pagesize=A4)
+    pdf = pdf_canvas.Canvas(buffer, pagesize=A4, pageCompression=1)
     ancho, alto = A4
     y = alto - 50
 
@@ -251,7 +251,7 @@ def cobros_pdf():
     pagos = db.session.scalars(stmt).all()
     empresa = _empresa()
     buffer = io.BytesIO()
-    pdf = pdf_canvas.Canvas(buffer, pagesize=landscape(A4))
+    pdf = pdf_canvas.Canvas(buffer, pagesize=landscape(A4), pageCompression=1)
     ancho, alto = landscape(A4)
     y = alto - 30
 
@@ -395,7 +395,7 @@ def estado_cuenta_pdf(cliente_id):
     total_pagado = total_facturado - sum(f.saldo for f in facturas)
 
     buffer = io.BytesIO()
-    pdf = pdf_canvas.Canvas(buffer, pagesize=A4)
+    pdf = pdf_canvas.Canvas(buffer, pagesize=A4, pageCompression=1)
     ancho, alto = A4
     y = alto - 50
 
@@ -505,7 +505,7 @@ def arqueo_pdf(arqueo_id):
     vales_list = arqueo.vales if hasattr(arqueo, 'vales') and arqueo.vales else []
 
     buffer = io.BytesIO()
-    pdf = pdf_canvas.Canvas(buffer, pagesize=A4)
+    pdf = pdf_canvas.Canvas(buffer, pagesize=A4, pageCompression=1)
     ancho, alto = A4
     ml, mr = 45, ancho - 45
     y = alto - 35

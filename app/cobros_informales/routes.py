@@ -151,7 +151,7 @@ def _recibo_pdf(cobro, empresa):
 
     ancho, alto = 80 * mm, 200 * mm
     buffer = io.BytesIO()
-    pdf = cv.Canvas(buffer, pagesize=(ancho, alto))
+    pdf = cv.Canvas(buffer, pagesize=(ancho, alto), pageCompression=1)
 
     def copia(etiqueta):
         y, margen = alto - 10 * mm, 7 * mm

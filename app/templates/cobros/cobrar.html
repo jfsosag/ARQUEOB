@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelector('#excedente-monto').textContent = formatCurrency(monto - totalPendiente);
       excedenteModal.show();
     } else {
-      document.querySelector('#payment-form').submit();
+      submitForm();
     }
   });
 
@@ -270,9 +270,48 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       excedenteManejo.value = btn.dataset.action;
       excedenteModal.hide();
-      document.querySelector('#payment-form').submit();
+      submitForm();
     });
   });
+
+  function submitForm() {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
+    const formData = new FormData(document.querySelector('#payment-form'));
+
+    fetch('{{ url_for("cobros.registrar_cobro") }}', {
+      method: 'POST',
+      body: formData
+    })
+    .then(r => r.json().then(d => ({status: r.status, data: d})))
+    .then(({status, data}) => {
+      if (data.ok) {
+        window.open(data.recibo_url, '_blank');
+        showToast('Pago registrado correctamente.');
+        setTimeout(() => { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Guardar cobro'; }, 2000);
+      } else {
+        showToast(data.error || 'Error al registrar el pago.', true);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Guardar cobro';
+      }
+    })
+    .catch(() => {
+      showToast('Error de conexión.', true);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Guardar cobro';
+    });
+  }
+
+  function showToast(msg, isError) {
+    const existing = document.querySelector('.toast-msg');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.className = `toast-msg position-fixed top-0 start-50 translate-middle-x mt-3 px-4 py-2 rounded-pill shadow ${isError ? 'bg-danger text-white' : 'bg-success text-white'}`;
+    div.style.zIndex = 9999;
+    div.textContent = msg;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3000);
+  }
 });
 </script>
 {% endblock %}

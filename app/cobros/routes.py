@@ -168,12 +168,10 @@ def registrar_cobro():
         db.session.add(pago)
         db.session.commit()
         registrar_accion("registrar_cobro", "cobros", f"Pago #{pago.id:06d} - {cliente.nombre} - RD$ {total_aplicado:,.2f}")
-        flash("Pago registrado y facturas actualizadas.", "success")
-        return redirect(url_for("cobros.recibo_pdf", pago_id=pago.id))
+        return jsonify({"ok": True, "pago_id": pago.id, "recibo_url": url_for("cobros.recibo_pdf", pago_id=pago.id)})
     except (ValueError, InvalidOperation) as exc:
         db.session.rollback()
-        flash(str(exc), "danger")
-        return redirect(url_for("cobros.cobrar", cliente_id=request.form.get("cliente_id", "")))
+        return jsonify({"ok": False, "error": str(exc)}), 400
 
 
 @cobros_bp.get("/<int:pago_id>/recibo.pdf")
