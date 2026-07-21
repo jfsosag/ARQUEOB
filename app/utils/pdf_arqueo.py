@@ -65,7 +65,7 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
     no_efectivo_total = totales.get("no_efectivo", 0)
     contado_total = totales.get("contado", 0)
     credito_total = totales.get("credito", 0)
-    vendido = contado_total + credito_total
+    vendido = contado_total
     balance = totales.get("balance", 0)
     diferencia = totales.get("diferencia", 0)
 
@@ -204,7 +204,7 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
     pdf.drawString(ML + 6, y - 9, f"Fecha: {arqueo.fecha.strftime('%d/%m/%Y')}")
     pdf.drawString(ML + 160, y - 9, f"Cajero: {arqueo.cajero or ''}")
     pdf.drawString(ML + 310, y - 9, f"Turno: {arqueo.turno or ''}")
-    pdf.drawRightString(MR - 6, y - 9, f"Hora: {ahora.strftime('%H:%M')}")
+    pdf.drawRightString(MR - 6, y - 9, f"Fondo: RD$ {arqueo.fondo_inicial:,.2f}")
     y -= 18
 
     # ═══════════════════════════════════════════════════════════════════
@@ -247,9 +247,10 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
         estado_label = f"FALTA  RD$ {abs(diferencia):,.2f}"
         estado_color = _C_RED
 
+    pdf.setStrokeColor(estado_color)
+    pdf.setLineWidth(1.2)
+    pdf.roundRect(ML, y - 22, CW, 24, 4, fill=0, stroke=1)
     pdf.setFillColor(estado_color)
-    pdf.roundRect(ML, y - 22, CW, 24, 4, fill=1, stroke=0)
-    pdf.setFillColor(white)
     pdf.setFont(FONT_B, 13)
     pdf.drawCentredString(W / 2, y - 17, estado_label)
     y -= 30
