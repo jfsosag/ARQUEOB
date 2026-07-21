@@ -16,6 +16,16 @@ _C_CARD_BG    = HexColor("#F8F9FA")
 _C_TOTAL_BG   = HexColor("#E3EDF5")
 _C_PURPLE     = HexColor("#8E44AD")
 
+FONT = "Helvetica"
+FONT_B = "Helvetica-Bold"
+FS = 7          # font size filas
+FS_HDR = 7      # font size headers
+FS_TOTAL = 7.5  # font size totales
+ROW_H = 11      # alto de fila
+HDR_H = 12      # alto header
+TOTAL_H = 13    # alto fila total
+ZEBRA_H = 11    # alto fondo zebra
+
 
 def _wrap(text, max_chars):
     words = str(text).split()
@@ -32,9 +42,11 @@ def _wrap(text, max_chars):
 def generar_arqueo_pdf(arqueo, empresa, username, ahora):
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4, pageCompression=1)
-    ancho, alto = A4
-    ml, mr = 40, ancho - 40
-    y = alto - 30
+    W, H = A4
+    ML, MR = 40, W - 40
+    CW = MR - ML  # content width
+
+    y = H - 30
     page_num = [1]
     print_time = ahora.strftime('%d/%m/%Y %H:%M')
 
@@ -57,108 +69,116 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
     balance = totales.get("balance", 0)
     diferencia = totales.get("diferencia", 0)
 
-    # ── Helper functions ──────────────────────────────────────────────
-    def _draw_footer():
-        pdf.setFont("Helvetica", 6.5)
+    # ── Helpers ───────────────────────────────────────────────────────
+    def _footer():
+        pdf.setFont(FONT, 6.5)
         pdf.setFillColor(HexColor("#666666"))
-        pdf.drawString(ml, 15, "ARQUEOB — Sistema de Arqueo de Caja")
-        pdf.drawCentredString(ancho / 2, 15, f"Página {page_num[0]}")
-        pdf.drawRightString(mr, 15, f"Impreso: {print_time} · {username}")
+        pdf.drawString(ML, 15, "ARQUEOB — Sistema de Arqueo de Caja")
+        pdf.drawCentredString(W / 2, 15, f"Página {page_num[0]}")
+        pdf.drawRightString(MR, 15, f"Impreso: {print_time} · {username}")
         pdf.setStrokeColor(_C_BORDER)
         pdf.setLineWidth(0.4)
-        pdf.line(ml, 25, mr, 25)
+        pdf.line(ML, 25, MR, 25)
 
-    def _check_page(needed=50):
+    def _chk(need=50):
         nonlocal y
-        if y < needed:
-            _draw_footer()
+        if y < need:
+            _footer()
             pdf.showPage()
             page_num[0] += 1
-            y = alto - 30
+            y = H - 30
 
-    def _section(title):
+    def _sec(title):
         nonlocal y
         y -= 4
-        _check_page(30)
+        _chk(28)
         pdf.setFillColor(_C_PRIMARY)
-        pdf.rect(ml, y - 12, mr - ml, 14, fill=1, stroke=0)
+        pdf.rect(ML, y - 12, CW, 14, fill=1, stroke=0)
         pdf.setFillColor(white)
-        pdf.setFont("Helvetica-Bold", 8)
-        pdf.drawString(ml + 6, y - 9, title)
+        pdf.setFont(FONT_B, 8)
+        pdf.drawString(ML + 6, y - 9, title)
         y -= 17
 
-    def _tbl_header(cols, labels):
+    def _hdr(cols, labels):
+        """Encabezado de tabla. cols = [(x, align), ...]"""
         nonlocal y
-        _check_page(24)
+        _chk(22)
         pdf.setFillColor(_C_HEADER_BG)
-        pdf.rect(ml, y - 10, mr - ml, 12, fill=1, stroke=0)
+        pdf.rect(ML, y - 10, CW, HDR_H, fill=1, stroke=0)
         pdf.setFillColor(black)
-        pdf.setFont("Helvetica-Bold", 7)
-        for x, label in zip(cols, labels):
-            if x < ancho / 2:
-                pdf.drawString(x, y - 8, label)
-            else:
+        pdf.setFont(FONT_B, FS_HDR)
+        for (x, align), label in zip(cols, labels):
+            if align == 'r':
                 pdf.drawRightString(x, y - 8, label)
-        y -= 12
+            else:
+                pdf.drawString(x, y - 8, label)
+        y -= HDR_H
 
-    def _tbl_row(cols, vals, bolds=None, right_from=None):
+    def _row(cols, vals):
+        """Fila de datos. cols = [(x, align), ...]"""
         nonlocal y
-        _check_page(14)
+        _chk(14)
         pdf.setFillColor(black)
-        for i, (x, v) in enumerate(zip(cols, vals)):
-            is_bold = bolds and i in bolds
-            pdf.setFont("Helvetica-Bold" if is_bold else "Helvetica", 7)
-            if right_from and i >= right_from:
+        pdf.setFont(FONT, FS)
+        for (x, align), v in zip(cols, vals):
+            if align == 'r':
                 pdf.drawRightString(x, y - 8, v)
             else:
                 pdf.drawString(x, y - 8, v)
-        y -= 11
+        y -= ROW_H
 
-    def _tbl_row_zebra(cols, vals, idx, bolds=None, right_from=None):
+    def _row_z(cols, vals, idx):
         nonlocal y
         if idx % 2 == 1:
             pdf.setFillColor(_C_ZEBRA)
-            pdf.rect(ml, y - 10, mr - ml, 11, fill=1, stroke=0)
-        _tbl_row(cols, vals, bolds, right_from)
+            pdf.rect(ML, y - 10, CW, ZEBRA_H, fill=1, stroke=0)
+        _row(cols, vals)
 
-    def _tbl_total(label, val, cols):
+    def _row_wrap(cols, vals, idx, wrap_i=0, wrap_max=40):
+        """Fila con texto envuelto en la columna wrap_i."""
         nonlocal y
-        _check_page(16)
-        pdf.setFillColor(_C_TOTAL_BG)
-        pdf.rect(ml, y - 11, mr - ml, 13, fill=1, stroke=0)
-        pdf.setFillColor(black)
-        pdf.setFont("Helvetica-Bold", 7.5)
-        pdf.drawString(cols[0] + 2, y - 9, label)
-        pdf.drawRightString(cols[-1], y - 9, val)
-        y -= 13
-
-    def _tbl_row_wrapped(cols, vals, idx, wrap_col=1, wrap_max=40):
-        nonlocal y
-        lines = _wrap(vals[wrap_col], wrap_max)
-        row_h = 11 + (len(lines) - 1) * 10
-        _check_page(row_h + 4)
+        lines = _wrap(vals[wrap_i], wrap_max)
+        n = len(lines)
+        rh = ROW_H + (n - 1) * 10
+        _chk(rh + 4)
         if idx % 2 == 1:
             pdf.setFillColor(_C_ZEBRA)
-            pdf.rect(ml, y - row_h + 1, mr - ml, row_h, fill=1, stroke=0)
+            pdf.rect(ML, y - rh + 1, CW, rh, fill=1, stroke=0)
         pdf.setFillColor(black)
-        for i, (x, v) in enumerate(zip(cols, vals)):
-            if i == wrap_col:
-                pdf.setFont("Helvetica", 7)
+        pdf.setFont(FONT, FS)
+        for i, ((x, align), v) in enumerate(zip(cols, vals)):
+            if i == wrap_i:
                 for li, line in enumerate(lines):
                     pdf.drawString(x, y - 8 - li * 10, line)
+            elif align == 'r':
+                pdf.drawRightString(x, y - 8, v)
             else:
-                pdf.setFont("Helvetica", 7)
                 pdf.drawString(x, y - 8, v)
-        y -= row_h
+        y -= rh
+
+    def _tot(label, val, left_x, right_x):
+        nonlocal y
+        _chk(16)
+        pdf.setFillColor(_C_TOTAL_BG)
+        pdf.rect(ML, y - 10, CW, TOTAL_H, fill=1, stroke=0)
+        pdf.setFillColor(black)
+        pdf.setFont(FONT_B, FS_TOTAL)
+        pdf.drawString(left_x + 2, y - 8, label)
+        pdf.drawRightString(right_x, y - 8, val)
+        y -= TOTAL_H
+
+    # ── Columnas base ─────────────────────────────────────────────────
+    L = ML + 5       # left margin + padding
+    R = MR - 5       # right margin - padding
 
     # ═══════════════════════════════════════════════════════════════════
     # 1. ENCABEZADO
     # ═══════════════════════════════════════════════════════════════════
-    pdf.setFont("Helvetica-Bold", 14)
+    pdf.setFont(FONT_B, 14)
     pdf.setFillColor(_C_PRIMARY)
-    pdf.drawCentredString(ancho / 2, y, empresa.get("nombre", ""))
+    pdf.drawCentredString(W / 2, y, empresa.get("nombre", ""))
     y -= 12
-    pdf.setFont("Helvetica", 7.5)
+    pdf.setFont(FONT, 7.5)
     pdf.setFillColor(HexColor("#444444"))
     info_parts = []
     if empresa.get("rnc"):
@@ -170,27 +190,27 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
     if empresa.get("email"):
         info_parts.append(empresa["email"])
     if info_parts:
-        pdf.drawCentredString(ancho / 2, y, " · ".join(info_parts))
+        pdf.drawCentredString(W / 2, y, " · ".join(info_parts))
         y -= 12
 
-    pdf.setFont("Helvetica-Bold", 12)
+    pdf.setFont(FONT_B, 12)
     pdf.setFillColor(_C_PRIMARY)
-    pdf.drawCentredString(ancho / 2, y, "ARQUEO DE CAJA")
+    pdf.drawCentredString(W / 2, y, "ARQUEO DE CAJA")
     y -= 14
     pdf.setFillColor(_C_HEADER_BG)
-    pdf.rect(ml, y - 12, mr - ml, 14, fill=1, stroke=0)
+    pdf.rect(ML, y - 12, CW, 14, fill=1, stroke=0)
     pdf.setFillColor(black)
-    pdf.setFont("Helvetica", 8)
-    pdf.drawString(ml + 6, y - 9, f"Fecha: {arqueo.fecha.strftime('%d/%m/%Y')}")
-    pdf.drawString(ml + 160, y - 9, f"Cajero: {arqueo.cajero or ''}")
-    pdf.drawString(ml + 310, y - 9, f"Turno: {arqueo.turno or ''}")
-    pdf.drawRightString(mr - 6, y - 9, f"Hora: {ahora.strftime('%H:%M')}")
+    pdf.setFont(FONT, 8)
+    pdf.drawString(ML + 6, y - 9, f"Fecha: {arqueo.fecha.strftime('%d/%m/%Y')}")
+    pdf.drawString(ML + 160, y - 9, f"Cajero: {arqueo.cajero or ''}")
+    pdf.drawString(ML + 310, y - 9, f"Turno: {arqueo.turno or ''}")
+    pdf.drawRightString(MR - 6, y - 9, f"Hora: {ahora.strftime('%H:%M')}")
     y -= 18
 
     # ═══════════════════════════════════════════════════════════════════
     # 2. TARJETAS DE RESUMEN
     # ═══════════════════════════════════════════════════════════════════
-    card_w = (mr - ml - 32) / 5
+    card_w = (CW - 32) / 5
     card_h = 40
     bar_h = 14
     cards = [
@@ -201,7 +221,7 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
         ("DIFERENCIA", diferencia, _C_GREEN if diferencia == 0 else (_C_YELLOW if diferencia > 0 else _C_RED)),
     ]
     for i, (label, amount, color) in enumerate(cards):
-        cx = ml + i * (card_w + 8)
+        cx = ML + i * (card_w + 8)
         pdf.setFillColor(_C_CARD_BG)
         pdf.roundRect(cx, y - card_h, card_w, card_h, 3, fill=1, stroke=0)
         pdf.setFillColor(color)
@@ -209,14 +229,14 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
         pdf.rect(cx, y - bar_h, 3, 3, fill=1, stroke=0)
         pdf.rect(cx + card_w - 3, y - bar_h, 3, 3, fill=1, stroke=0)
         pdf.setFillColor(white)
-        pdf.setFont("Helvetica-Bold", 6)
+        pdf.setFont(FONT_B, 6)
         pdf.drawCentredString(cx + card_w / 2, y - bar_h + 4, label)
         pdf.setFillColor(black)
-        pdf.setFont("Helvetica-Bold", 8.5)
+        pdf.setFont(FONT_B, 8.5)
         pdf.drawCentredString(cx + card_w / 2, y - card_h + 8, f"RD$ {amount:,.2f}")
     y -= card_h + 6
 
-    # ── Indicador de cuadre (grande y llamativo) ──────────────────────
+    # ── Indicador de cuadre ──────────────────────────────────────────
     if diferencia == 0:
         estado_label = "CUADRADO"
         estado_color = _C_GREEN
@@ -228,82 +248,86 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
         estado_color = _C_RED
 
     pdf.setFillColor(estado_color)
-    pdf.roundRect(ml, y - 22, mr - ml, 24, 4, fill=1, stroke=0)
+    pdf.roundRect(ML, y - 22, CW, 24, 4, fill=1, stroke=0)
     pdf.setFillColor(white)
-    pdf.setFont("Helvetica-Bold", 13)
-    pdf.drawCentredString(ancho / 2, y - 17, estado_label)
+    pdf.setFont(FONT_B, 13)
+    pdf.drawCentredString(W / 2, y - 17, estado_label)
     y -= 30
 
     # ═══════════════════════════════════════════════════════════════════
     # 3. DESGLOSE DE EFECTIVO
     # ═══════════════════════════════════════════════════════════════════
-    _section("DESGLOSE DE EFECTIVO")
-    col_d, col_c, col_t = ml + 5, ml + 140, mr - 5
-    _tbl_header([col_d, col_c, col_t], ["Denominación", "Cantidad", "Total"])
+    _sec("DESGLOSE DE EFECTIVO")
+    # Col 0: Denominación (izq), Col 1: Cantidad (centro), Col 2: Total (der)
+    c_denom = (L, 'l')
+    c_cant = (ML + CW * 0.65, 'c')  # 65% del ancho → centro
+    c_tot = (R, 'r')
+    c3 = [c_denom, c_cant, c_tot]
+    _hdr(c3, ["Denominación", "Cantidad", "Total"])
     for idx, (denom, cant) in enumerate(arqueo.conteos.items()):
         total_denom = int(denom) * cant
-        _check_page(14)
-        _tbl_row_zebra(
-            [col_d, col_c, col_t],
-            [f"RD$ {int(denom):,}", str(cant), f"RD$ {total_denom:,.2f}"],
-            idx, right_from=2,
-        )
-    _tbl_total("TOTAL EFECTIVO", f"RD$ {efectivo:,.2f}", [col_d, col_t])
+        _chk(14)
+        _row_z(c3, [f"RD$ {int(denom):,}", str(cant), f"RD$ {total_denom:,.2f}"], idx)
+    _tot("TOTAL EFECTIVO", f"RD$ {efectivo:,.2f}", L, R)
 
     # ═══════════════════════════════════════════════════════════════════
     # 4. FORMAS DE PAGO NO EFECTIVO
     # ═══════════════════════════════════════════════════════════════════
-    _check_page(50)
-    _section("FORMAS DE PAGO NO EFECTIVO")
+    _chk(50)
+    _sec("FORMAS DE PAGO NO EFECTIVO")
     grupos = {"Tarjetas": [], "Transferencias": [], "Cheques": [], "Vales": [], "Otros": []}
     for item in no_efectivo:
         tipo = item.get("tipo", "Otros")
         grupos.get(tipo, grupos["Otros"]).append(item)
     for item in vales:
-        grupos["Vales"].append({"tipo": "Vales", "concepto": item.get("concepto", ""), "monto": item.get("monto", 0), "banco": "", "numero": ""})
+        grupos["Vales"].append({"tipo": "Vales", "concepto": item.get("concepto", ""),
+                                "monto": item.get("monto", 0), "banco": "", "numero": ""})
 
     for tipo, items in grupos.items():
         if not items:
             continue
-        _check_page(30)
-        pdf.setFont("Helvetica-Bold", 7.5)
+        _chk(28)
+        pdf.setFont(FONT_B, 7.5)
         pdf.setFillColor(_C_PRIMARY)
-        pdf.drawString(ml + 5, y, tipo)
+        pdf.drawString(L, y, tipo)
         y -= 10
 
         if tipo in ("Transferencias", "Cheques"):
             ref_label = "Referencia" if tipo == "Transferencias" else "Nº Cheque"
-            col_banco, col_ref, col_mon = ml + 5, ml + 180, mr - 5
-            _tbl_header([col_banco, col_ref, col_mon], ["Banco", ref_label, "Monto"])
+            c_banco = (L, 'l')
+            c_ref = (ML + CW * 0.60, 'l')
+            c_mon = (R, 'r')
+            cols3 = [c_banco, c_ref, c_mon]
+            _hdr(cols3, ["Banco", ref_label, "Monto"])
             total_grupo = 0
             for idx, it in enumerate(items):
                 total_grupo += it.get("monto", 0)
-                _tbl_row_wrapped(
-                    [col_banco, col_ref, col_mon],
-                    [it.get("banco", ""), it.get("numero", ""), f"RD$ {it.get('monto', 0):,.2f}"],
-                    idx, wrap_col=0, wrap_max=32,
-                )
-            _tbl_total(f"Total {tipo}", f"RD$ {total_grupo:,.2f}", [col_banco, col_mon])
+                _row_wrap(cols3, [it.get("banco", ""), it.get("numero", ""),
+                         f"RD$ {it.get('monto', 0):,.2f}"], idx, wrap_i=0, wrap_max=32)
+            _tot(f"Total {tipo}", f"RD$ {total_grupo:,.2f}", L, R)
         else:
-            col_con, col_mon = ml + 5, mr - 5
-            _tbl_header([col_con, col_mon], ["Concepto", "Monto"])
+            c_con = (L, 'l')
+            c_mon2 = (R, 'r')
+            cols2 = [c_con, c_mon2]
+            _hdr(cols2, ["Concepto", "Monto"])
             total_grupo = 0
             for idx, it in enumerate(items):
                 total_grupo += it.get("monto", 0)
-                _tbl_row_wrapped(
-                    [col_con, col_mon],
-                    [it.get("concepto", "") or "", f"RD$ {it.get('monto', 0):,.2f}"],
-                    idx, wrap_col=0, wrap_max=70,
-                )
-            _tbl_total(f"Total {tipo}", f"RD$ {total_grupo:,.2f}", [col_con, col_mon])
+                _row_wrap(cols2, [it.get("concepto", "") or "",
+                         f"RD$ {it.get('monto', 0):,.2f}"], idx, wrap_i=0, wrap_max=70)
+            _tot(f"Total {tipo}", f"RD$ {total_grupo:,.2f}", L, R)
 
     # ═══════════════════════════════════════════════════════════════════
     # 5. FACTURAS AL CONTADO (tabla)
     # ═══════════════════════════════════════════════════════════════════
-    _check_page(50)
-    _section("FACTURAS AL CONTADO")
-    col_tipo_c, col_desde, col_hasta, col_monto_c = ml + 5, ml + 130, ml + 290, mr - 5
-    _tbl_header([col_tipo_c, col_desde, col_hasta, col_monto_c], ["Tipo", "Desde", "Hasta", "Monto"])
+    _chk(50)
+    _sec("FACTURAS AL CONTADO")
+    c_tipo_c = (L, 'l')
+    c_desde = (ML + CW * 0.35, 'l')
+    c_hasta = (ML + CW * 0.65, 'l')
+    c_monto_c = (R, 'r')
+    cols_c = [c_tipo_c, c_desde, c_hasta, c_monto_c]
+    _hdr(cols_c, ["Tipo", "Desde", "Hasta", "Monto"])
     contado_rows = [
         ("Sin Comprobante", contado.get("sc")),
         ("Con Comprobante", contado.get("cc")),
@@ -315,72 +339,70 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
         monto = fc.get("monto", 0)
         if monto == 0 and not fc.get("desde") and not fc.get("hasta"):
             continue
-        _check_page(14)
-        _tbl_row_zebra(
-            [col_tipo_c, col_desde, col_hasta, col_monto_c],
-            [label, str(fc.get("desde", "") or "—"), str(fc.get("hasta", "") or "—"), f"RD$ {monto:,.2f}"],
-            idx, right_from=3,
-        )
-    contado_sc = contado.get("sc", {})
-    contado_cc = contado.get("cc", {})
-    contado_ri = contado.get("ri", {})
-    total_contado_sum = (contado_sc.get("monto", 0) if isinstance(contado_sc, dict) else 0) + \
-                        (contado_cc.get("monto", 0) if isinstance(contado_cc, dict) else 0) + \
-                        (contado_ri.get("monto", 0) if isinstance(contado_ri, dict) else 0)
-    _tbl_total("TOTAL CONTADO", f"RD$ {total_contado_sum:,.2f}", [col_tipo_c, col_monto_c])
+        _chk(14)
+        _row_z(cols_c, [label, str(fc.get("desde", "") or "—"),
+               str(fc.get("hasta", "") or "—"), f"RD$ {monto:,.2f}"], idx)
+    sc = contado.get("sc", {})
+    cc = contado.get("cc", {})
+    ri = contado.get("ri", {})
+    total_c = ((sc.get("monto", 0) if isinstance(sc, dict) else 0) +
+               (cc.get("monto", 0) if isinstance(cc, dict) else 0) +
+               (ri.get("monto", 0) if isinstance(ri, dict) else 0))
+    _tot("TOTAL CONTADO", f"RD$ {total_c:,.2f}", L, R)
 
     # ═══════════════════════════════════════════════════════════════════
     # 6. FACTURAS A CRÉDITO
     # ═══════════════════════════════════════════════════════════════════
     if credito:
-        _check_page(40)
-        _section("FACTURAS A CRÉDITO")
-        col_tipo_cr, col_num, col_mon_cr = ml + 5, ml + 150, mr - 5
-        _tbl_header([col_tipo_cr, col_num, col_mon_cr], ["Tipo", "Nº Factura", "Total"])
+        _chk(40)
+        _sec("FACTURAS A CRÉDITO")
+        c_tipo_cr = (L, 'l')
+        c_num = (ML + CW * 0.50, 'l')
+        c_mon_cr = (R, 'r')
+        cols_cr = [c_tipo_cr, c_num, c_mon_cr]
+        _hdr(cols_cr, ["Tipo", "Nº Factura", "Total"])
         total_cr = 0
         for idx, fc in enumerate(credito):
             total_cr += fc.get("monto", 0)
-            _tbl_row_zebra(
-                [col_tipo_cr, col_num, col_mon_cr],
-                [str(fc.get("tipo", ""))[:35], str(fc.get("numero", ""))[:30], f"RD$ {fc.get('monto', 0):,.2f}"],
-                idx, right_from=2,
-            )
-        _tbl_total(f"Total: {len(credito)} factura(s)", f"RD$ {total_cr:,.2f}", [col_tipo_cr, col_mon_cr])
+            _row_z(cols_cr, [str(fc.get("tipo", ""))[:35],
+                   str(fc.get("numero", ""))[:30],
+                   f"RD$ {fc.get('monto', 0):,.2f}"], idx)
+        _tot(f"Total: {len(credito)} factura(s)", f"RD$ {total_cr:,.2f}", L, R)
 
     # ═══════════════════════════════════════════════════════════════════
     # 7. TOTALES FINALES
     # ═══════════════════════════════════════════════════════════════════
-    _check_page(50)
+    _chk(50)
     y -= 2
     pdf.setStrokeColor(_C_BORDER)
     pdf.setLineWidth(0.4)
-    pdf.line(ml, y, mr, y)
+    pdf.line(ML, y, MR, y)
     y -= 6
     pdf.setFillColor(_C_PRIMARY)
-    pdf.rect(ml, y - 16, mr - ml, 18, fill=1, stroke=0)
+    pdf.rect(ML, y - 16, CW, 18, fill=1, stroke=0)
     pdf.setFillColor(white)
-    pdf.setFont("Helvetica-Bold", 10)
-    pdf.drawString(ml + 8, y - 12, "TOTAL GENERAL DEL ARQUEO")
-    pdf.drawRightString(mr - 8, y - 12, f"RD$ {balance:,.2f}")
+    pdf.setFont(FONT_B, 10)
+    pdf.drawString(ML + 8, y - 12, "TOTAL GENERAL DEL ARQUEO")
+    pdf.drawRightString(MR - 8, y - 12, f"RD$ {balance:,.2f}")
     y -= 24
 
     # ═══════════════════════════════════════════════════════════════════
     # 8. FIRMAS
     # ═══════════════════════════════════════════════════════════════════
     y -= 6
-    sig_w = (mr - ml) / 3
+    sig_w = CW / 3
     firmas = ["Preparado por", "Revisado por", "Autorizado por"]
     for i, titulo in enumerate(firmas):
-        sx = ml + i * sig_w + sig_w / 2
+        sx = ML + i * sig_w + sig_w / 2
         pdf.setStrokeColor(_C_BORDER)
         pdf.setLineWidth(0.4)
         pdf.line(sx - 50, y, sx + 50, y)
         y -= 10
-        pdf.setFont("Helvetica", 7.5)
+        pdf.setFont(FONT, 7.5)
         pdf.setFillColor(HexColor("#555555"))
         pdf.drawCentredString(sx, y, titulo)
 
-    _draw_footer()
+    _footer()
     pdf.save()
     buffer.seek(0)
     return buffer
