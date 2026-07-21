@@ -287,8 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(({status, data}) => {
       if (data.ok) {
         window.open(data.recibo_url, '_blank');
-        showToast('Pago registrado correctamente.');
-        setTimeout(() => { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Guardar cobro'; }, 2000);
+        window.location.href = '{{ url_for("clientes.detalle", cliente_id=cliente.id) }}';
       } else {
         showToast(data.error || 'Error al registrar el pago.', true);
         submitBtn.disabled = false;
