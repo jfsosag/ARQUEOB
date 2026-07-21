@@ -8,11 +8,21 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
     body{background:#f4f6fb;display:grid;place-items:center;min-height:100vh;margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-    .login-card{max-width:400px;width:100%;border-radius:1rem;box-shadow:0 8px 32px rgba(28,39,69,.1)}
+    .login-card{max-width:420px;width:100%;border-radius:1rem;box-shadow:0 8px 32px rgba(28,39,69,.1)}
     .login-brand{background:linear-gradient(120deg,#172554,#334fa9);color:#fff;border-radius:1rem 1rem 0 0;padding:2rem;text-align:center}
     .login-brand i{font-size:2.5rem}
-    .form-control{border-radius:.6rem;min-height:2.8rem}
-    .btn-primary{border-radius:.6rem}
+    .user-btn{display:flex;align-items:center;gap:.75rem;width:100%;padding:.85rem 1rem;border:2px solid #e9ecef;border-radius:.75rem;background:#fff;text-decoration:none;color:inherit;transition:all .15s}
+    .user-btn:hover{border-color:#334fa9;background:#f0f4ff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+    .user-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(120deg,#172554,#334fa9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;flex-shrink:0}
+    .user-name{font-weight:600;font-size:1rem}
+    .user-role{font-size:.8rem;color:#6c757d}
+    .pwd-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;place-items:center}
+    .pwd-overlay.active{display:grid}
+    .pwd-modal{background:#fff;border-radius:1rem;box-shadow:0 16px 48px rgba(0,0,0,.2);width:100%;max-width:380px;padding:2rem}
+    .pwd-modal .pwd-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(120deg,#172554,#334fa9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;margin:0 auto 1rem}
+    .pwd-modal .pwd-name{text-align:center;font-weight:700;font-size:1.1rem;margin-bottom:.25rem}
+    .pwd-modal .pwd-role{text-align:center;font-size:.85rem;color:#6c757d;margin-bottom:1.25rem}
+    .pwd-error{display:none;color:#dc3545;font-size:.85rem;text-align:center;margin-top:.5rem}
   </style>
 </head>
 <body>
@@ -24,18 +34,154 @@
     </div>
     <div class="card-body p-4">
       {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} py-2 small" role="alert">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
-      <form method="post">
+      <p class="text-secondary mb-3 text-center">Seleccione su usuario para iniciar</p>
+      <form method="post" id="login-form">
+        <input type="hidden" name="user_id" id="user-id">
+        <input type="hidden" name="password" id="login-password" value="">
+        <div class="d-flex flex-column gap-2">
+          {% for u in usuarios %}
+          <button type="submit" class="user-btn" data-uid="{{ u.id }}" data-has-pwd="{{ 'true' if u.has_password() else 'false' }}">
+            <div class="user-avatar">{{ u.nombre_completo[:1]|upper }}</div>
+            <div>
+              <div class="user-name">{{ u.nombre_completo }}</div>
+              <div class="user-role">{{ 'Administrador' if u.is_admin else 'Usuario' }}{% if u.has_password() %} <i class="bi bi-lock-fill ms-1" style="font-size:.7rem"></i>{% endif %}</div>
+            </div>
+          </button>
+          {% endfor %}
+        </div>
+      </form>
+      {% if not usuarios %}
+      <p class="text-center text-muted py-3">No hay usuarios activos disponibles.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Modal de contraseña ───────────────────────────────────────── #}
+  <div class="pwd-overlay" id="pwd-overlay">
+    <div class="pwd-modal">
+      <div class="pwd-avatar" id="pwd-avatar">?</div>
+      <div class="pwd-name" id="pwd-name"></div>
+      <div class="pwd-role" id="pwd-role"></div>
+      <form id="pwd-form">
+        <input type="hidden" id="pwd-uid" value="">
         <div class="mb-3">
-          <label class="form-label fw-semibold">Usuario</label>
-          <div class="input-group"><span class="input-group-text"><i class="bi bi-person"></i></span><input class="form-control" name="username" required autofocus autocomplete="username"></div>
+          <label class="form-label fw-semibold small">Contraseña</label>
+          <div class="input-group">
+            <input type="password" class="form-control form-control-lg" id="pwd-input" autofocus>
+            <button type="button" class="btn btn-outline-secondary" id="pwd-toggle"><i class="bi bi-eye"></i></button>
+          </div>
+          <div class="pwd-error" id="pwd-error"></div>
         </div>
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Contraseña</label>
-          <div class="input-group"><span class="input-group-text"><i class="bi bi-lock"></i></span><input class="form-control" name="password" type="password" required autocomplete="current-password"></div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary flex-fill" id="pwd-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-primary flex-fill" id="pwd-submit"><i class="bi bi-box-arrow-in-right me-1"></i> Entrar</button>
         </div>
-        <button class="btn btn-primary btn-lg w-100" type="submit"><i class="bi bi-box-arrow-in-right me-1"></i> Iniciar sesión</button>
       </form>
     </div>
   </div>
+
+  <script>
+    (function(){
+      const form = document.getElementById('login-form');
+      const userIdInput = document.getElementById('user-id');
+      const passwordInput = document.getElementById('login-password');
+      const overlay = document.getElementById('pwd-overlay');
+      const pwdInput = document.getElementById('pwd-input');
+      const pwdError = document.getElementById('pwd-error');
+      const pwdAvatar = document.getElementById('pwd-avatar');
+      const pwdName = document.getElementById('pwd-name');
+      const pwdRole = document.getElementById('pwd-role');
+      const pwdUid = document.getElementById('pwd-uid');
+
+      let pendingSubmit = false;
+
+      document.querySelectorAll('.user-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const uid = btn.dataset.uid;
+          const hasPwd = btn.dataset.hasPwd === 'true';
+
+          if (hasPwd) {
+            const name = btn.querySelector('.user-name').textContent;
+            const role = btn.querySelector('.user-role').textContent;
+            const avatar = btn.querySelector('.user-avatar').textContent;
+            pwdAvatar.textContent = avatar;
+            pwdName.textContent = name;
+            pwdRole.textContent = role;
+            pwdUid.value = uid;
+            pwdInput.value = '';
+            pwdError.style.display = 'none';
+            overlay.classList.add('active');
+            setTimeout(() => pwdInput.focus(), 100);
+          } else {
+            userIdInput.value = uid;
+            passwordInput.value = '';
+            form.submit();
+          }
+        });
+      });
+
+      document.getElementById('pwd-cancel').addEventListener('click', () => {
+        overlay.classList.remove('active');
+      });
+
+      document.getElementById('pwd-toggle').addEventListener('click', () => {
+        const type = pwdInput.type === 'password' ? 'text' : 'password';
+        pwdInput.type = type;
+        document.getElementById('pwd-toggle').querySelector('i').className = type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+      });
+
+      document.getElementById('pwd-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (pendingSubmit) return;
+
+        const uid = pwdUid.value;
+        const password = pwdInput.value;
+
+        if (!password) {
+          pwdError.textContent = 'Ingrese la contraseña.';
+          pwdError.style.display = 'block';
+          return;
+        }
+
+        pendingSubmit = true;
+        pwdError.style.display = 'none';
+        document.getElementById('pwd-submit').disabled = true;
+
+        fetch('{{ url_for("auth.verificar_clave") }}', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({user_id: uid, password: password})
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            userIdInput.value = uid;
+            passwordInput.value = password;
+            form.submit();
+          } else {
+            pwdError.textContent = data.error || 'Contraseña incorrecta.';
+            pwdError.style.display = 'block';
+            pendingSubmit = false;
+            document.getElementById('pwd-submit').disabled = false;
+            pwdInput.value = '';
+            pwdInput.focus();
+          }
+        })
+        .catch(() => {
+          pwdError.textContent = 'Error de conexión.';
+          pwdError.style.display = 'block';
+          pendingSubmit = false;
+          document.getElementById('pwd-submit').disabled = false;
+        });
+      });
+
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('active');
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

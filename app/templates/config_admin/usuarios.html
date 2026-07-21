@@ -14,7 +14,7 @@
       <tbody>
         {% for u in usuarios %}
         <tr>
-          <td><strong>{{ u.username }}</strong></td>
+          <td><strong>{{ u.username }}</strong>{% if not u.has_password() %} <i class="bi bi-unlock text-secondary ms-1" title="Sin contraseña"></i>{% else %} <i class="bi bi-lock-fill text-secondary ms-1" title="Tiene contraseña"></i>{% endif %}</td>
           <td>{{ u.nombre_completo }}</td>
           <td>{{ u.email or '—' }}</td>
           <td><span class="badge text-bg-{{ 'success' if u.is_active else 'secondary' }}">{{ 'Activo' if u.is_active else 'Inactivo' }}</span></td>

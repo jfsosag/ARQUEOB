@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import flash, redirect, render_template, request, url_for
+from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_user, logout_user
 
 from app.auth import auth_bp
@@ -15,11 +15,23 @@ def login():
         return redirect(url_for("dashboard.index"))
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
+        user_id = request.form.get("user_id", "")
         password = request.form.get("password", "")
-
-        user = db.session.scalar(db.select(Usuario).where(Usuario.username == username))
-        if user and user.is_active and user.check_password(password):
+        user = db.session.get(Usuario, int(user_id)) if user_id.isdigit() else None
+        if user and user.is_active:
+            if user.has_password():
+                if not password:
+                    flash("Este usuario requiere contraseña.", "warning")
+                    usuarios = db.session.scalars(
+                        db.select(Usuario).where(Usuario.is_active == True).order_by(Usuario.nombre_completo)
+                    ).all()
+                    return render_template("auth/login.html", usuarios=usuarios, focus_user=user.id)
+                if not user.check_password(password):
+                    flash("Contraseña incorrecta.", "danger")
+                    usuarios = db.session.scalars(
+                        db.select(Usuario).where(Usuario.is_active == True).order_by(Usuario.nombre_completo)
+                    ).all()
+                    return render_template("auth/login.html", usuarios=usuarios, focus_user=user.id)
             login_user(user, remember=True)
             user.touch_login()
             db.session.commit()
@@ -27,9 +39,31 @@ def login():
             next_page = request.args.get("next")
             return redirect(next_page or url_for("dashboard.index"))
 
-        flash("Credenciales inválidas o usuario desactivado.", "danger")
+        flash("Usuario no encontrado o desactivado.", "danger")
 
-    return render_template("auth/login.html")
+    usuarios = db.session.scalars(
+        db.select(Usuario).where(Usuario.is_active == True).order_by(Usuario.nombre_completo)
+    ).all()
+    return render_template("auth/login.html", usuarios=usuarios)
+
+
+@auth_bp.route("/verificar-clave", methods=["POST"])
+def verificar_clave():
+    data = request.get_json() or {}
+    user_id = data.get("user_id", "")
+    password = data.get("password", "")
+
+    if not user_id or not str(user_id).isdigit():
+        return jsonify({"ok": False, "error": "Solicitud inválida."}), 400
+
+    user = db.session.get(Usuario, int(user_id))
+    if not user or not user.is_active:
+        return jsonify({"ok": False, "error": "Usuario no encontrado o desactivado."}), 404
+
+    if not user.check_password(password):
+        return jsonify({"ok": False, "error": "Contraseña incorrecta."}), 401
+
+    return jsonify({"ok": True})
 
 
 @auth_bp.route("/logout")
@@ -40,22 +74,6 @@ def logout():
     return redirect(url_for("auth.login"))
 
 
-@auth_bp.route("/mi-cuenta", methods=["GET", "POST"])
+@auth_bp.route("/mi-cuenta")
 def mi_cuenta():
-    if request.method == "POST":
-        actual = request.form.get("password_actual", "")
-        nueva = request.form.get("password_nueva", "")
-        confirmar = request.form.get("password_confirmar", "")
-
-        if not current_user.check_password(actual):
-            flash("La contraseña actual es incorrecta.", "danger")
-        elif nueva != confirmar:
-            flash("Las contraseñas nuevas no coinciden.", "danger")
-        elif len(nueva) < 6:
-            flash("La contraseña debe tener al menos 6 caracteres.", "danger")
-        else:
-            current_user.set_password(nueva)
-            db.session.commit()
-            flash("Contraseña actualizada correctamente.", "success")
-
     return render_template("auth/mi_cuenta.html")

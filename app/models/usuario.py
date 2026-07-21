@@ -14,7 +14,7 @@ class Usuario(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(200), nullable=True)
     telefono = db.Column(db.String(40), nullable=True)
-    password_hash = db.Column(db.String(200), nullable=False)
+    password_hash = db.Column(db.String(200), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -23,10 +23,18 @@ class Usuario(UserMixin, db.Model):
     permisos = db.relationship("Permiso", backref="usuario", lazy="dynamic", cascade="all, delete-orphan")
 
     # ---- password helpers ----
+    def has_password(self) -> bool:
+        return bool(self.password_hash)
+
     def set_password(self, raw: str) -> None:
         self.password_hash = bcrypt.hashpw(raw.encode(), bcrypt.gensalt()).decode()
 
+    def clear_password(self) -> None:
+        self.password_hash = None
+
     def check_password(self, raw: str) -> bool:
+        if not self.password_hash:
+            return False
         try:
             return bcrypt.checkpw(raw.encode(), self.password_hash.encode())
         except (ValueError, TypeError):

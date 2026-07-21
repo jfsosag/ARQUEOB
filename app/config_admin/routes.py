@@ -54,7 +54,8 @@ def nuevo_usuario():
         nombre = request.form.get("nombre_completo", "").strip()
         email = request.form.get("email", "").strip() or None
         telefono = request.form.get("telefono", "").strip() or None
-        password = request.form.get("password", "")
+        password = request.form.get("password", "").strip()
+        sin_contrasena = request.form.get("sin_contrasena") == "on"
         is_admin = request.form.get("is_admin") == "on"
 
         errors = []
@@ -62,10 +63,10 @@ def nuevo_usuario():
             errors.append("El nombre de usuario es obligatorio.")
         if not nombre:
             errors.append("El nombre completo es obligatorio.")
-        if len(password) < 6:
-            errors.append("La contraseña debe tener al menos 6 caracteres.")
         if db.session.scalar(db.select(Usuario).where(Usuario.username == username)):
             errors.append("Ya existe un usuario con ese nombre de usuario.")
+        if not sin_contrasena and not password:
+            errors.append("Debe ingresar una contraseña o marcar 'Sin contraseña'.")
 
         if errors:
             for e in errors:
@@ -73,7 +74,10 @@ def nuevo_usuario():
             return render_template("config_admin/usuario_form.html", usuario=None, modulos=MODULOS_SISTEMA, form_data=request.form)
 
         user = Usuario(nombre_completo=nombre, username=username, email=email, telefono=telefono, is_admin=is_admin)
-        user.set_password(password)
+        if sin_contrasena:
+            user.clear_password()
+        else:
+            user.set_password(password)
         db.session.add(user)
         db.session.flush()
 
@@ -103,11 +107,12 @@ def editar_usuario(uid):
         user.is_active = request.form.get("is_active") == "on"
         user.is_admin = request.form.get("is_admin") == "on"
 
+        sin_contrasena = request.form.get("sin_contrasena") == "on"
         new_password = request.form.get("password", "").strip()
-        if new_password:
-            if len(new_password) < 6:
-                flash("La contraseña debe tener al menos 6 caracteres.", "danger")
-                return render_template("config_admin/usuario_form.html", usuario=user, modulos=MODULOS_SISTEMA, form_data=request.form)
+
+        if sin_contrasena:
+            user.clear_password()
+        elif new_password:
             user.set_password(new_password)
 
         if user.is_admin:
@@ -167,9 +172,6 @@ def reset_password(uid):
     _admin_required()
     user = db.get_or_404(Usuario, uid)
     password = request.form.get("password", "")
-    if len(password) < 6:
-        flash("La contraseña debe tener al menos 6 caracteres.", "danger")
-        return redirect(url_for("config_admin.editar_usuario", uid=uid))
     user.set_password(password)
     db.session.commit()
     registrar_accion("reset_password", "configuracion", f"Contraseña reiniciada: {user.username}")
