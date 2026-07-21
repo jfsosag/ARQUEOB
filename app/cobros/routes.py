@@ -132,6 +132,8 @@ def registrar_cobro():
             if fecha_str:
                 pago.fecha_transferencia = date.fromisoformat(fecha_str)
 
+        db.session.add(pago)
+
         facturas = db.session.scalars(
             select(Factura).where(Factura.cliente_id == cliente.id, Factura.estado != EstadoFactura.PAGADA).order_by(Factura.fecha)
         ).all()
@@ -165,7 +167,6 @@ def registrar_cobro():
                 pass
 
         pago.monto_pagado = total_aplicado
-        db.session.add(pago)
         registrar_accion("registrar_cobro", "cobros", f"Pago #{pago.id:06d} - {cliente.nombre} - RD$ {total_aplicado:,.2f}")
         db.session.commit()
         return jsonify({"ok": True, "pago_id": pago.id, "recibo_url": url_for("cobros.recibo_pdf", pago_id=pago.id)})
