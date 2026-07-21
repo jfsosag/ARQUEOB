@@ -271,77 +271,124 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
     _tot("TOTAL EFECTIVO", f"RD$ {efectivo:,.2f}", L, R)
 
     # ═══════════════════════════════════════════════════════════════════
-    # 4. FORMAS DE PAGO NO EFECTIVO
+    # 4. FORMAS DE PAGO NO EFECTIVO (listado simple)
     # ═══════════════════════════════════════════════════════════════════
     _chk(50)
     _sec("FORMAS DE PAGO NO EFECTIVO")
-    grupos = {"Tarjetas": [], "Transferencias": [], "Cheques": [], "Vales": [], "Otros": []}
+    grupos = {"Vales": [], "Tarjetas": [], "Transferencias": [], "Cheques": [], "Otros": []}
     for item in no_efectivo:
         tipo = item.get("tipo", "Otros")
         grupos.get(tipo, grupos["Otros"]).append(item)
     for item in vales:
-        grupos["Vales"].append({"tipo": "Vales", "concepto": item.get("concepto", ""),
+        grupos["Vales"].append({"concepto": item.get("concepto", ""),
                                 "monto": item.get("monto", 0), "banco": "", "numero": ""})
 
     for tipo, items in grupos.items():
         if not items:
             continue
-        _chk(28)
+        total_grupo = sum(it.get("monto", 0) for it in items)
+        n_items = len(items)
+
+        # ── Encabezado del grupo ──────────────────────────────────────
+        _chk(20)
         pdf.setFont(FONT_B, 7.5)
         pdf.setFillColor(_C_PRIMARY)
         pdf.drawString(L, y, tipo)
-        y -= 10
+        pdf.setFont(FONT, 7)
+        pdf.setFillColor(HexColor("#666666"))
+        pdf.drawString(L + pdf.stringWidth(tipo, FONT_B, 7.5) + 6, y,
+                       f"({n_items} registro{'s' if n_items != 1 else ''})")
+        pdf.setFillColor(black)
+        y -= 8
+        pdf.setStrokeColor(_C_BORDER)
+        pdf.setLineWidth(0.3)
+        pdf.line(L, y, R, y)
+        y -= 4
 
+        # ── Listado de ítems ──────────────────────────────────────────
         if tipo in ("Transferencias", "Cheques"):
-            ref_label = "Referencia" if tipo == "Transferencias" else "Nº Cheque"
-            c_banco = (L, 'l')
-            c_ref = (ML + CW * 0.60, 'l')
-            c_mon = (R, 'r')
-            cols3 = [c_banco, c_ref, c_mon]
-            _hdr(cols3, ["Banco", ref_label, "Monto"])
-            total_grupo = 0
+            ref_label = "Ref." if tipo == "Transferencias" else "Nº Chq."
+            c_monto = (ML + CW * 0.22, 'r')
+            c_desc = (ML + CW * 0.24, 'l')
+            c_ref = (R, 'l')
             for idx, it in enumerate(items):
-                total_grupo += it.get("monto", 0)
-                _row_wrap(cols3, [it.get("banco", ""), it.get("numero", ""),
-                         f"RD$ {it.get('monto', 0):,.2f}"], idx, wrap_i=0, wrap_max=32)
-            _tot(f"Total {tipo}", f"RD$ {total_grupo:,.2f}", L, R)
+                _chk(12)
+                monto_str = f"RD$ {it.get('monto', 0):,.2f}"
+                desc_parts = []
+                if it.get("banco"):
+                    desc_parts.append(it["banco"])
+                desc = " - ".join(desc_parts) if desc_parts else "—"
+                ref = it.get("numero", "") or "—"
+                # Fila: MONTO | DESCRIPCIÓN | REFERENCIA
+                pdf.setFont(FONT_B, 7)
+                pdf.drawRightString(c_monto[0], y - 7, monto_str)
+                pdf.setFont(FONT, 7)
+                pdf.drawString(c_desc[0], y - 7, desc[:45])
+                pdf.drawString(c_ref[0], y - 7, f"{ref_label}: {ref}")
+                y -= 10
         else:
-            c_con = (L, 'l')
-            c_mon2 = (R, 'r')
-            cols2 = [c_con, c_mon2]
-            _hdr(cols2, ["Concepto", "Monto"])
-            total_grupo = 0
+            c_monto = (ML + CW * 0.22, 'r')
+            c_desc = (ML + CW * 0.24, 'l')
             for idx, it in enumerate(items):
-                total_grupo += it.get("monto", 0)
-                _row_wrap(cols2, [it.get("concepto", "") or "",
-                         f"RD$ {it.get('monto', 0):,.2f}"], idx, wrap_i=0, wrap_max=70)
-            _tot(f"Total {tipo}", f"RD$ {total_grupo:,.2f}", L, R)
+                _chk(12)
+                monto_str = f"RD$ {it.get('monto', 0):,.2f}"
+                desc = it.get("concepto", "") or "—"
+                # Fila: MONTO | DESCRIPCIÓN
+                pdf.setFont(FONT_B, 7)
+                pdf.drawRightString(c_monto[0], y - 7, monto_str)
+                pdf.setFont(FONT, 7)
+                pdf.drawString(c_desc[0], y - 7, desc[:70])
+                y -= 10
+
+        # ── Total del grupo ───────────────────────────────────────────
+        _chk(14)
+        pdf.setFillColor(_C_TOTAL_BG)
+        pdf.rect(ML, y - 10, CW, 12, fill=1, stroke=0)
+        pdf.setFillColor(black)
+        pdf.setFont(FONT_B, 7.5)
+        pdf.drawString(L + 2, y - 8, f"Total {tipo}")
+        pdf.drawRightString(R, y - 8, f"RD$ {total_grupo:,.2f}")
+        y -= 14
 
     # ═══════════════════════════════════════════════════════════════════
-    # 5. FACTURAS AL CONTADO (tabla)
+    # 5. FACTURAS AL CONTADO
     # ═══════════════════════════════════════════════════════════════════
     _chk(50)
     _sec("FACTURAS AL CONTADO")
-    c_tipo_c = (L, 'l')
-    c_desde = (ML + CW * 0.35, 'l')
-    c_hasta = (ML + CW * 0.65, 'l')
-    c_monto_c = (R, 'r')
-    cols_c = [c_tipo_c, c_desde, c_hasta, c_monto_c]
-    _hdr(cols_c, ["Tipo", "Desde", "Hasta", "Monto"])
     contado_rows = [
         ("Sin Comprobante", contado.get("sc")),
         ("Con Comprobante", contado.get("cc")),
         ("Recibos de Ingreso", contado.get("ri")),
     ]
-    for idx, (label, fc) in enumerate(contado_rows):
+    for label, fc in contado_rows:
         if not fc or not isinstance(fc, dict):
             continue
         monto = fc.get("monto", 0)
-        if monto == 0 and not fc.get("desde") and not fc.get("hasta"):
+        desde = fc.get("desde", "") or "—"
+        hasta = fc.get("hasta", "") or "—"
+        if monto == 0 and desde == "—" and hasta == "—":
             continue
-        _chk(14)
-        _row_z(cols_c, [label, str(fc.get("desde", "") or "—"),
-               str(fc.get("hasta", "") or "—"), f"RD$ {monto:,.2f}"], idx)
+        _chk(28)
+        # Subtítulo del tipo
+        pdf.setFont(FONT_B, 7.5)
+        pdf.setFillColor(_C_PRIMARY)
+        pdf.drawString(L, y, label)
+        y -= 10
+        # Datos en 3 columnas: Desde | Hasta | Monto
+        pdf.setFont(FONT, 7.5)
+        pdf.setFillColor(black)
+        col1 = L + 10
+        col2 = ML + CW * 0.40
+        col3 = R
+        pdf.drawString(col1, y - 7, f"Desde: {desde}")
+        pdf.drawString(col2, y - 7, f"Hasta: {hasta}")
+        pdf.drawRightString(col3, y - 7, f"Monto: RD$ {monto:,.2f}")
+        y -= 12
+        pdf.setStrokeColor(_C_BORDER)
+        pdf.setLineWidth(0.2)
+        pdf.line(L, y, R, y)
+        y -= 4
+
     sc = contado.get("sc", {})
     cc = contado.get("cc", {})
     ri = contado.get("ri", {})
