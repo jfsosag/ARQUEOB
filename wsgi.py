@@ -13,8 +13,12 @@ try:
 
     with app.app_context():
         from app.extensions import db
-        from flask_migrate import upgrade
-        upgrade()
+        from flask_migrate import upgrade, stamp
+        try:
+            upgrade()
+        except Exception as e:
+            print(f"Migración falló ({e}), haciendo stamp a head...")
+            stamp()
         from app.models.usuario import Usuario
         admin = db.session.scalar(db.select(Usuario).where(Usuario.username == "admin"))
         if not admin:
