@@ -166,8 +166,8 @@ def registrar_cobro():
 
         pago.monto_pagado = total_aplicado
         db.session.add(pago)
-        db.session.commit()
         registrar_accion("registrar_cobro", "cobros", f"Pago #{pago.id:06d} - {cliente.nombre} - RD$ {total_aplicado:,.2f}")
+        db.session.commit()
         return jsonify({"ok": True, "pago_id": pago.id, "recibo_url": url_for("cobros.recibo_pdf", pago_id=pago.id)})
     except (ValueError, InvalidOperation) as exc:
         db.session.rollback()

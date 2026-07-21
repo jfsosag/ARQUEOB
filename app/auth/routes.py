@@ -34,8 +34,8 @@ def login():
                     return render_template("auth/login.html", usuarios=usuarios, focus_user=user.id)
             login_user(user, remember=True)
             user.touch_login()
-            db.session.commit()
             registrar_accion("inicio_sesion", "auth", f"Sesión iniciada: {user.username}")
+            db.session.commit()
             next_page = request.args.get("next")
             return redirect(next_page or url_for("dashboard.index"))
 
@@ -70,6 +70,7 @@ def verificar_clave():
 def logout():
     if current_user.is_authenticated:
         registrar_accion("cierre_sesion", "auth", f"Sesión cerrada: {current_user.username}")
+        db.session.commit()
     logout_user()
     return redirect(url_for("auth.login"))
 

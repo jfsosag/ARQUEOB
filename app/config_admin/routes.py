@@ -84,9 +84,8 @@ def nuevo_usuario():
         modulos_seleccionados = request.form.getlist("modulos")
         for m in modulos_seleccionados:
             db.session.add(Permiso(usuario_id=user.id, modulo=m))
-        db.session.commit()
-
         registrar_accion("crear_usuario", "configuracion", f"Usuario creado: {user.username}")
+        db.session.commit()
         flash("Usuario creado correctamente.", "success")
         return redirect(url_for("config_admin.usuarios"))
 
@@ -101,14 +100,30 @@ def editar_usuario(uid):
     user = db.get_or_404(Usuario, uid)
 
     if request.method == "POST":
-        user.nombre_completo = request.form.get("nombre_completo", user.nombre_completo).strip()
-        user.email = request.form.get("email", "").strip() or None
-        user.telefono = request.form.get("telefono", "").strip() or None
-        user.is_active = request.form.get("is_active") == "on"
-        user.is_admin = request.form.get("is_admin") == "on"
-
+        nombre = request.form.get("nombre_completo", "").strip()
+        email = request.form.get("email", "").strip() or None
+        telefono = request.form.get("telefono", "").strip() or None
+        is_active = request.form.get("is_active") == "on"
+        is_admin = request.form.get("is_admin") == "on"
         sin_contrasena = request.form.get("sin_contrasena") == "on"
         new_password = request.form.get("password", "").strip()
+
+        errors = []
+        if not nombre:
+            errors.append("El nombre completo es obligatorio.")
+        if not sin_contrasena and not new_password and not user.has_password():
+            errors.append("Debe ingresar una contraseña o marcar 'Sin contraseña'.")
+
+        if errors:
+            for e in errors:
+                flash(e, "danger")
+            return render_template("config_admin/usuario_form.html", usuario=user, modulos=MODULOS_SISTEMA, form_data=request.form)
+
+        user.nombre_completo = nombre
+        user.email = email
+        user.telefono = telefono
+        user.is_active = is_active
+        user.is_admin = is_admin
 
         if sin_contrasena:
             user.clear_password()
@@ -122,8 +137,14 @@ def editar_usuario(uid):
             for m in request.form.getlist("modulos"):
                 db.session.add(Permiso(usuario_id=user.id, modulo=m))
 
-        db.session.commit()
-        registrar_accion("editar_usuario", "configuracion", f"Usuario editado: {user.username}")
+        try:
+            registrar_accion("editar_usuario", "configuracion", f"Usuario editado: {user.username}")
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            flash("Error al guardar los cambios. Intente de nuevo.", "danger")
+            return render_template("config_admin/usuario_form.html", usuario=user, modulos=MODULOS_SISTEMA, form_data=request.form)
+
         flash("Usuario actualizado correctamente.", "success")
         return redirect(url_for("config_admin.usuarios"))
 
@@ -142,8 +163,8 @@ def eliminar_usuario(uid):
 
     username = user.username
     db.session.delete(user)
-    db.session.commit()
     registrar_accion("eliminar_usuario", "configuracion", f"Usuario eliminado: {username}")
+    db.session.commit()
     flash("Usuario eliminado.", "success")
     return redirect(url_for("config_admin.usuarios"))
 
@@ -158,9 +179,9 @@ def toggle_usuario(uid):
         flash("No puede desactivar su propio usuario.", "danger")
         return redirect(url_for("config_admin.usuarios"))
     user.is_active = not user.is_active
-    db.session.commit()
     estado = "activado" if user.is_active else "desactivado"
     registrar_accion("toggle_usuario", "configuracion", f"Usuario {estado}: {user.username}")
+    db.session.commit()
     flash(f"Usuario {estado}.", "success")
     return redirect(url_for("config_admin.usuarios"))
 
@@ -173,7 +194,7 @@ def reset_password(uid):
     user = db.get_or_404(Usuario, uid)
     password = request.form.get("password", "")
     user.set_password(password)
-    db.session.commit()
     registrar_accion("reset_password", "configuracion", f"Contraseña reiniciada: {user.username}")
+    db.session.commit()
     flash("Contraseña restablecida correctamente.", "success")
     return redirect(url_for("config_admin.editar_usuario", uid=uid))
