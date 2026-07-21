@@ -36,7 +36,7 @@ def calcular_totales(conteos, no_efectivo, contado, credito, vales):
     no_efectivo_total = tarjetas + transferencias + cheques + vales_total + otros_ne
     contado_total = sum(Decimal(str(item.get("monto", 0))) for item in contado.values())
     credito_total = sum(Decimal(str(item.get("monto", 0))) for item in credito)
-    facturado = contado_total + credito_total
+    facturado = contado_total
     return {
         "efectivo": float(efectivo),
         "tarjetas": float(tarjetas),
@@ -49,7 +49,7 @@ def calcular_totales(conteos, no_efectivo, contado, credito, vales):
         "facturado": float(facturado),
         "contado": float(contado_total),
         "credito": float(credito_total),
-        "diferencia": float(efectivo + no_efectivo_total - facturado),
+        "diferencia": float(efectivo + no_efectivo_total - contado_total),
         "cant_contado": len(contado),
         "cant_credito": len(credito),
         "cant_vales": len(vales),

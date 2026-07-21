@@ -278,9 +278,9 @@
     const ri = parseFloat($('.ct-monto[data-tipo="ri"]')?.value) || 0;
     const contadoTotal = sc + cc + ri;
     const creditoTotal = crData.reduce((s, r) => s + r.monto, 0);
-    const vendido = contadoTotal + creditoTotal;
+    const vendido = contadoTotal;
     const balance = efectivo + noEfectivo;
-    const facturado = contadoTotal + creditoTotal;
+    const facturado = contadoTotal;
     const diferencia = balance - facturado;
     const cantCredito = crData.length;
 
