@@ -70,12 +70,16 @@ def formulario():
                 raise ValueError("Las cantidades no pueden ser negativas.")
 
             no_efectivo = []
-            for tipo, monto in zip(request.form.getlist("tipo_no_efectivo[]"), request.form.getlist("monto_no_efectivo[]")):
+            for tipo, concepto, monto in zip(
+                request.form.getlist("tipo_no_efectivo[]"),
+                request.form.getlist("concepto_no_efectivo[]"),
+                request.form.getlist("monto_no_efectivo[]"),
+            ):
                 if monto.strip():
                     valor = Decimal(monto)
                     if valor < 0:
                         raise ValueError("Los montos no pueden ser negativos.")
-                    no_efectivo.append({"tipo": tipo, "monto": float(valor)})
+                    no_efectivo.append({"tipo": tipo, "concepto": concepto.strip(), "monto": float(valor)})
 
             contado = {}
             for tipo, key in [("sc", "Sin Comprobante"), ("cc", "Con Comprobante"), ("ri", "Recibos de Ingreso")]:

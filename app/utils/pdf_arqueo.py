@@ -314,12 +314,8 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
             for idx, it in enumerate(items):
                 _chk(12)
                 monto_str = f"RD$ {it.get('monto', 0):,.2f}"
-                desc_parts = []
-                if it.get("banco"):
-                    desc_parts.append(it["banco"])
-                desc = " - ".join(desc_parts) if desc_parts else "—"
+                desc = it.get("concepto", "") or it.get("banco", "") or "—"
                 ref = it.get("numero", "") or "—"
-                # Fila: MONTO | DESCRIPCIÓN | REFERENCIA
                 pdf.setFont(FONT_B, 7)
                 pdf.drawRightString(c_monto[0], y - 7, monto_str)
                 pdf.setFont(FONT, 7)
@@ -333,7 +329,6 @@ def generar_arqueo_pdf(arqueo, empresa, username, ahora):
                 _chk(12)
                 monto_str = f"RD$ {it.get('monto', 0):,.2f}"
                 desc = it.get("concepto", "") or "—"
-                # Fila: MONTO | DESCRIPCIÓN
                 pdf.setFont(FONT_B, 7)
                 pdf.drawRightString(c_monto[0], y - 7, monto_str)
                 pdf.setFont(FONT, 7)

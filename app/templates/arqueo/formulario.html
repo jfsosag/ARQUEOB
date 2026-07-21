@@ -118,23 +118,23 @@
           {# Sin Comprobante #}
           <div class="col-md-4">
             <div class="fw-semibold small text-secondary mb-1">Sin Comprobante</div>
-            <input class="form-control form-control-sm ct-monto mb-1" data-tipo="sc" type="number" step="0.01" min="0" value="0" placeholder="Monto Total">
-            <input class="form-control form-control-sm ct-desde mb-1" data-tipo="sc" placeholder="Desde">
-            <input class="form-control form-control-sm ct-hasta" data-tipo="sc" placeholder="Hasta">
+            <input class="form-control form-control-sm ct-monto mb-1" name="contado_sc_monto" data-tipo="sc" type="number" step="0.01" min="0" value="0" placeholder="Monto Total">
+            <input class="form-control form-control-sm ct-desde mb-1" name="contado_sc_desde" data-tipo="sc" placeholder="Desde">
+            <input class="form-control form-control-sm ct-hasta" name="contado_sc_hasta" data-tipo="sc" placeholder="Hasta">
           </div>
           {# Con Comprobante #}
           <div class="col-md-4">
             <div class="fw-semibold small text-secondary mb-1">Con Comprobante</div>
-            <input class="form-control form-control-sm ct-monto mb-1" data-tipo="cc" type="number" step="0.01" min="0" value="0" placeholder="Monto Total">
-            <input class="form-control form-control-sm ct-desde mb-1" data-tipo="cc" placeholder="Desde">
-            <input class="form-control form-control-sm ct-hasta" data-tipo="cc" placeholder="Hasta">
+            <input class="form-control form-control-sm ct-monto mb-1" name="contado_cc_monto" data-tipo="cc" type="number" step="0.01" min="0" value="0" placeholder="Monto Total">
+            <input class="form-control form-control-sm ct-desde mb-1" name="contado_cc_desde" data-tipo="cc" placeholder="Desde">
+            <input class="form-control form-control-sm ct-hasta" name="contado_cc_hasta" data-tipo="cc" placeholder="Hasta">
           </div>
           {# Recibos de Ingreso #}
           <div class="col-md-4">
             <div class="fw-semibold small text-secondary mb-1">Recibos de Ingreso</div>
-            <input class="form-control form-control-sm ct-monto mb-1" data-tipo="ri" type="number" step="0.01" min="0" value="0" placeholder="Monto Total">
-            <input class="form-control form-control-sm ct-desde mb-1" data-tipo="ri" placeholder="Desde">
-            <input class="form-control form-control-sm ct-hasta" data-tipo="ri" placeholder="Hasta">
+            <input class="form-control form-control-sm ct-monto mb-1" name="contado_ri_monto" data-tipo="ri" type="number" step="0.01" min="0" value="0" placeholder="Monto Total">
+            <input class="form-control form-control-sm ct-desde mb-1" name="contado_ri_desde" data-tipo="ri" placeholder="Desde">
+            <input class="form-control form-control-sm ct-hasta" name="contado_ri_hasta" data-tipo="ri" placeholder="Hasta">
           </div>
         </div>
       </div>
@@ -228,7 +228,7 @@
     if (!neData.length) { wrap.style.display = 'none'; hidden.innerHTML = ''; updateResumen(); return; }
     wrap.style.display = '';
     tbody.innerHTML = neData.map((r, i) => `<tr><td><span class="badge text-bg-secondary">${r.tipo}</span></td><td class="small">${r.concepto || '—'}</td><td class="text-end">${fmt(r.monto)}</td><td><button type="button" class="btn btn-sm btn-outline-danger py-0" data-rm-ne="${i}"><i class="bi bi-x"></i></button></td></tr>`).join('');
-    hidden.innerHTML = neData.map((r) => `<input type="hidden" name="tipo_no_efectivo[]" value="${r.tipo}"><input type="hidden" name="monto_no_efectivo[]" value="${r.monto}">`).join('');
+    hidden.innerHTML = neData.map((r) => `<input type="hidden" name="tipo_no_efectivo[]" value="${r.tipo}"><input type="hidden" name="concepto_no_efectivo[]" value="${r.concepto || ''}"><input type="hidden" name="monto_no_efectivo[]" value="${r.monto}">`).join('');
     tbody.querySelectorAll('[data-rm-ne]').forEach(btn => btn.addEventListener('click', () => { neData.splice(parseInt(btn.dataset.rmNe), 1); renderNE(); }));
     updateResumen();
   }
