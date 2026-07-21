@@ -13,12 +13,22 @@ try:
 
     with app.app_context():
         from app.extensions import db
+        from sqlalchemy import text
         from flask_migrate import upgrade, stamp
         try:
             upgrade()
         except Exception as e:
             print(f"Migración falló ({e}), haciendo stamp a head...")
             stamp()
+
+        try:
+            db.session.execute(text(
+                "ALTER TABLE usuarios ALTER COLUMN password_hash DROP NOT NULL"
+            ))
+            db.session.commit()
+            print("password_hash nullable OK")
+        except Exception:
+            db.session.rollback()
         from app.models.usuario import Usuario
         admin = db.session.scalar(db.select(Usuario).where(Usuario.username == "admin"))
         if not admin:
