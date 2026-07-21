@@ -13,8 +13,9 @@ try:
 
     with app.app_context():
         from app.extensions import db
+        from flask_migrate import upgrade
+        upgrade()
         from app.models.usuario import Usuario
-        db.create_all()
         admin = db.session.scalar(db.select(Usuario).where(Usuario.username == "admin"))
         if not admin:
             admin = Usuario(
