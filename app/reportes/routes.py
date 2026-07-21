@@ -778,21 +778,20 @@ def arqueo_pdf(arqueo_id):
     if credito:
         _check_page(60)
         _section("FACTURAS A CRÉDITO")
-        col_num = ml + 5
-        col_cliente = ml + 65
-        col_con = ml + 200
+        col_tipo = ml + 5
+        col_num = ml + 120
         col_mon = mr - 5
-        _tbl_header([col_num, col_cliente, col_con, col_mon], ["Nº Factura", "Cliente", "Concepto", "Total"])
+        _tbl_header([col_tipo, col_num, col_mon], ["Tipo", "Nº Factura", "Total"])
         total_cr = 0
         for idx, fc in enumerate(credito):
             _check_page(16)
             total_cr += fc.get("monto", 0)
             _tbl_row_zebra(
-                [col_num, col_cliente, col_con, col_mon],
-                [str(fc.get("numero", ""))[:14], str(fc.get("cliente", ""))[:20], str(fc.get("concepto", ""))[:28], f"RD$ {fc.get('monto', 0):,.2f}"],
-                idx, right_from=3,
+                [col_tipo, col_num, col_mon],
+                [str(fc.get("tipo", ""))[:28], str(fc.get("numero", ""))[:22], f"RD$ {fc.get('monto', 0):,.2f}"],
+                idx, right_from=2,
             )
-        _tbl_total(f"Total: {len(credito)} factura(s)", f"RD$ {total_cr:,.2f}", [col_num, col_mon])
+        _tbl_total(f"Total: {len(credito)} factura(s)", f"RD$ {total_cr:,.2f}", [col_tipo, col_mon])
 
     # ─────────────────────────────────────────────────────────────────
     # 7. TOTALES FINALES

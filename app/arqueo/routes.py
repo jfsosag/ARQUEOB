@@ -97,10 +97,9 @@ def formulario():
                     vales.append({"concepto": concepto.strip(), "monto": float(valor)})
 
             credito = []
-            for desde, hasta, cantidad, monto in zip(
-                request.form.getlist("credito_desde[]"),
-                request.form.getlist("credito_hasta[]"),
-                request.form.getlist("credito_cantidad[]"),
+            for tipo, numero, monto in zip(
+                request.form.getlist("credito_tipo[]"),
+                request.form.getlist("credito_numero[]"),
                 request.form.getlist("credito_monto[]"),
             ):
                 if monto.strip():
@@ -108,9 +107,8 @@ def formulario():
                     if not valor or valor <= 0:
                         raise ValueError("Las facturas a crédito requieren monto positivo.")
                     credito.append({
-                        "desde": desde.strip(),
-                        "hasta": hasta.strip(),
-                        "cantidad": int(cantidad or 0),
+                        "tipo": tipo.strip(),
+                        "numero": numero.strip(),
                         "monto": float(valor),
                     })
 
@@ -479,18 +477,18 @@ def reporte(arqueo_id):
     if credito:
         _check_page(60)
         _section("FACTURAS A CRÉDITO")
-        col_num, col_cli, col_con, col_mon = ml + 5, ml + 65, ml + 200, mr - 5
-        _tbl_header([col_num, col_cli, col_con, col_mon], ["Nº Factura", "Cliente", "Concepto", "Total"])
+        col_tipo, col_num, col_mon = ml + 5, ml + 120, mr - 5
+        _tbl_header([col_tipo, col_num, col_mon], ["Tipo", "Nº Factura", "Total"])
         total_cr = 0
         for idx, fc in enumerate(credito):
             _check_page(16)
             total_cr += fc.get("monto", 0)
             _tbl_row_zebra(
-                [col_num, col_cli, col_con, col_mon],
-                [str(fc.get("numero", ""))[:14], str(fc.get("cliente", ""))[:20], str(fc.get("concepto", ""))[:28], f"RD$ {fc.get('monto', 0):,.2f}"],
-                idx, right_from=3,
+                [col_tipo, col_num, col_mon],
+                [str(fc.get("tipo", ""))[:28], str(fc.get("numero", ""))[:22], f"RD$ {fc.get('monto', 0):,.2f}"],
+                idx, right_from=2,
             )
-        _tbl_total(f"Total: {len(credito)} factura(s)", f"RD$ {total_cr:,.2f}", [col_num, col_mon])
+        _tbl_total(f"Total: {len(credito)} factura(s)", f"RD$ {total_cr:,.2f}", [col_tipo, col_mon])
 
     # ─────────────────────────────────────────────────────────────────
     # 7. TOTALES FINALES
